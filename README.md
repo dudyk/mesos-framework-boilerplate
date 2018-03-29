@@ -2,7 +2,7 @@
 
 Based on https://github.com/tobilg/mesos-framework.git
 
-API abstraction of scheduler and executor AIPs.
+API abstraction of scheduler and executor APIs.
 
 ### Changes:
 
