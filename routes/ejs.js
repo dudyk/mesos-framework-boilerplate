@@ -4,6 +4,7 @@ var ejs;
 ejs = {
     setup: function (app) {
         app.get("/", ejs.root);
+        app.get("/partials/overview.html", ejs.overview);
         app.get("/partials/tasks.html", ejs.tasks);
         app.get("/stylesheets/dynamic-style.css", ejs.css);
     },
@@ -19,6 +20,9 @@ ejs = {
             }
         }
         res.render("index", {"moduleMenus": moduleMenus, "moduleFiles": moduleFiles});
+    },
+    overview: function (req, res) {
+        res.render("overview", {"staticOverviewCells": req.staticOverviewCells});
     },
     tasks: function (req, res) {
         if (!req.modules) {

@@ -12,14 +12,22 @@ module.exports = function (scheduler, frameworkConfiguration, restartHelper) {
     var tasks = frameworkConfiguration.tasks;
 
     router.use(function (req, res, next) {
+        function filterPaths(path) {
+            return req.path.startsWith(path);
+        }
         req.tasks = tasks;
         req.scheduler = scheduler;
         req.frameworkConfiguration = frameworkConfiguration;
         req.restartHelper = restartHelper;
+        req.auditLog = baseApi.auditLog;
         if (!process.env.AUTH_COOKIE_ENCRYPTION_KEY || req.path.match(/^\/framework\/configuration/) || req.isAuthenticated()) {
             // No encryption key - no authentication used, framework configuration endpoint is auth aware
             next();
         } else {
+            if (frameworkConfiguration.authExemptPaths.filter(filterPaths).length > 0) {
+                next();
+                return;
+            }
             res.status(401).json({"error": "Not authenticated"});
         }
     });
@@ -46,11 +54,17 @@ module.exports = function (scheduler, frameworkConfiguration, restartHelper) {
 
     });
 
+    router.get("/tasks/pending", function (req, res) {
+        res.json(scheduler.pendingTasks);
+    })
+
     router.post("/tasks/:task/restart", baseApi.taskRestart);
 
     router.post("/tasks/rollingRestart", baseApi.rollingRestart);
 
     router.post("/tasks/killAll", baseApi.killAllTasks);
+
+    router.post("/tasks/:task/kill", baseApi.taskKill);
 
 
     router.get("/tasks/types", baseApi.getTaskTypes);
@@ -61,5 +75,14 @@ module.exports = function (scheduler, frameworkConfiguration, restartHelper) {
 
     router.get("/logs", baseApi.getLogs);
 
+    router.put("/logs/:component/:level", baseApi.setLogLevel);
+
+    router.get("/logs/modules", baseApi.getLogModules);
+
+    router.get('/upgradeVersions',baseApi.upgradeVersions);
+
+    router.put('/submitReviewRequest',baseApi.submitReviewRequest);
+    
+    router.put('/upgradeFramework',baseApi.upgradeFramework);
     return router;
 };

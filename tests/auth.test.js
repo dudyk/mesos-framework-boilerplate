@@ -51,7 +51,7 @@ describe("Authentication init", function () {
     });
     it("No auth", function (done) {
         var app = api;
-        sandbox.stub(app, "use", function (url, cb) {
+        sandbox.stub(app, "use").callsFake(function (url, cb) {
             if (url === "/login") {
                 var req = new MockReq();
                 var res = new MockRes();
@@ -78,7 +78,7 @@ describe("Authentication init", function () {
         } catch (error) {
             err = error;
         }
-        expect(err).to.be.an.error;
+        expect(err).to.be.an("error");
     });
     it("Gitlab basic setup", function () {
         var app = express();
@@ -91,17 +91,23 @@ describe("Authentication init", function () {
     it("Google basic setup with logout and scope", function (done) {
         var app = api;
         var called = false;
-        sandbox.stub(app, "get", function (url, cb) {
+        var cleared = false;
+        sandbox.stub(app, "get").callsFake(function (url, cb) {
             if (url === "/logout") {
                 var req = new MockReq();
                 var res = new MockRes();
                 res.redirect = function (redirectUrl) {
                     expect(redirectUrl).to.equal("/login");
                     expect(called).to.be.true;
+                    expect(cleared).to.be.true;
                     done();
                 };
+                req.session = {};
                 req.logout = function () {
                     called = true;
+                };
+                res.clearCookie = function (name) {
+                    cleared = true;
                 };
                 cb(req, res);
             }

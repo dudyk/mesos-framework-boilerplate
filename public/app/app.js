@@ -47,6 +47,10 @@ app.config(['$routeProvider', function ($routeProvider) {
         templateUrl: 'partials/logs.html',
         controller: 'LogsController',
         activeTab: 'logs'
+    }).when('/upgrade', {
+        templateUrl: 'partials/upgrade.html',
+        controller: 'UpgradeController',
+        activeTab: 'upgrade'
     }).when('/module/:moduleName', {
         templateUrl: function (params) {
             //$$route.activeTab = params.moduleName;

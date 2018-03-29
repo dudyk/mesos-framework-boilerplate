@@ -89,6 +89,8 @@ describe("EJS tests", function () {
                 expect(cb).to.equal(ejsRoutes.tasks);
             } else if (path === "/stylesheets/dynamic-style.css") {
                 expect(cb).to.equal(ejsRoutes.css);
+            } else if (path === "/partials/overview.html") {
+                expect(cb).to.equal(ejsRoutes.overview);
             } else {
                 expect(false).to.be.true;
             }

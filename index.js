@@ -12,12 +12,14 @@ const fs = require("fs");
 var express = require("express");
 
 // Project modules
-var config = require("./lib/config");
+var appConfig = require("./lib/config");
 var RestartHelper = require("./lib/restartHelper");
+var linkHelper = require("./lib/linkHelper");
 var baseApi = require("./lib/baseApi");
 var initAuth = require("./lib/auth");
 var ejs = require("./routes/ejs");
 var populateTasks = require("./lib/populateTasks").populateTasks;
+var ConfigHelper = require("./lib/configHelper").ConfigHelper;
 
 // Modules loaded array
 var moduleSetups = [];
@@ -28,24 +30,7 @@ require("require-environment-variables")([
     "HOST",
     "PORT0",
     "MESOS_SANDBOX",
-    "FRAMEWORK_NAME",
-    "TASK_DEF_NUM",
-    // Task settings
-    "TASK0_NAME",
-    "TASK0_NUM_INSTANCES",
-    "TASK0_CPUS",
-    "TASK0_MEM",
-    "TASK0_IMAGE"
-/*  Optional variables for tasks
-    "TASK0_HEALTHCHECK",
-    "TASK0_HEALTHCHECK_PORT",
-    "TASK0_URI",
-    "TASK0_ARGS",
-    "TASK0_CONTAINER_PARAMS",
-    "AUTH_COOKIE_ENCRYPTION_KEY",
-    "TASK0_CONTAINER_PRIVILEGED",
-    "TASK0_FIXED_PORTS",
-    "TASK0_ENV"  */
+    "FRAMEWORK_NAME"
 ]);
 
 // Create the Express object
@@ -53,10 +38,10 @@ var app = express();
 app.set('view engine', 'ejs');
 
 // Set application properties
-app.set("port", process.env.PORT0 || config.application.port);
-app.set("host", process.env.HOST || config.application.host);
-app.set("env", process.env.NODE_ENV || config.application.environment);
-app.set("logLevel", process.env.LOG_LEVEL || config.application.logLevel);
+app.set("port", process.env.PORT0 || appConfig.application.port);
+app.set("host", process.env.HOST || appConfig.application.host);
+app.set("env", process.env.NODE_ENV || appConfig.application.environment);
+app.set("logLevel", process.env.LOG_LEVEL || appConfig.application.logLevel);
 
 // Initialize optional user authorization
 initAuth(app);
@@ -65,36 +50,38 @@ initAuth(app);
 app.use(express.static("public"));
 app.use("/bower_components", express.static("bower_components"));
 
-var Scheduler;
+var helpers = require("./lib/helpers");
 
-// Instantiate the mesos-framework module related objects
-if (fs.existsSync("./mesos-framework")) {
-    Scheduler = require("./mesos-framework").Scheduler;
-} else {
-    Scheduler = require("mesos-framework").Scheduler;
-}
+var Scheduler = helpers.getMesosModule().Scheduler;
 
 // The framework's overall configuration
 var frameworkConfiguration = {
     "masterUrl": process.env.MASTER_IP || "leader.mesos",
     "port": 5050,
     "frameworkName": process.env.FRAMEWORK_NAME,
+    "appName": process.env.MARATHON_APP_ID,
+    "marathonResources": {
+        "cpu": process.env.MARATHON_APP_RESOURCE_CPUS,
+        "mem": process.env.MARATHON_APP_RESOURCE_MEM
+    },
     "logging": {
         "path": process.env.MESOS_SANDBOX + "/logs/",
         "fileName": process.env.FRAMEWORK_NAME + ".log",
         "level": app.get("logLevel")
     },
     "killUnknownTasks": true,
+    "exponentialBackoffMinimum": Math.round(Math.random() * 1000 + 500),
     "useZk": true,
     "staticPorts": true,
     "serialNumberedTasks": false,
-    "userAuthSupport": !!process.env.AUTH_COOKIE_ENCRYPTION_KEY,
-    "tasks": populateTasks(),
-    "restartStates": ["TASK_FAILED", "TASK_LOST", "TASK_ERROR", "TASK_FINISHED", "TASK_KILLED"],
+    "restartStates": ["TASK_FAILED", "TASK_LOST", "TASK_ERROR", "TASK_FINISHED", "TASK_KILLED"], // A sealed vault is killed and does not finish normally
+    "authExemptPaths": [], // Paths that are authentication aware that do not need to be checked for authentication.
     "moduleList": []
 };
 
-function requireModules() {
+fs.mkdirSync(process.env.MESOS_SANDBOX + "/logs");
+
+function requireModules(scheduler) {
     // Importing pluggable modules
     var moduleFiles = fs.readdirSync("./");
     if (moduleFiles) {
@@ -103,67 +90,231 @@ function requireModules() {
         for (index = 0; index < moduleFiles.length; index += 1) {
             currentModule = moduleFiles[index];
             if (currentModule.match(/-module$/) && fs.existsSync("./" + currentModule + "/index.js")) {
+                scheduler.logger.info("Loading module " + currentModule);
                 moduleSetups.push(require("./" + currentModule));
             }
         }
     }
 }
 
-fs.mkdirSync(process.env.MESOS_SANDBOX + "/logs");
+var configHelper;
+configHelper = new ConfigHelper(app, frameworkConfiguration, function (error, config) {
+    var propertyType;
+    var tasksDefined = false;
+    var linksDefined = false;
+    var envVars = {};
+    this.logger.debug("Config from server:" + JSON.stringify(config));
+    Object.getOwnPropertyNames(config).forEach(function (property) {
+        propertyType = typeof config[property];
+        if (property.toUpperCase() === property && (propertyType === "number" || propertyType === "string")) {
+            process.env[property] = config[property];
+            envVars[property] = config[property];
+        } else if (property.toUpperCase() === property && propertyType === "object") {
+            envVars[property] = JSON.stringify(config[property]);
+        }
+    });
 
-requireModules();
+    if (process.env.ZK_PATH) {
+        frameworkConfiguration.zkPrefix = process.env.ZK_PATH;
+    }
 
-var scheduler = new Scheduler(frameworkConfiguration);
-var restartHelper;
-
-// Start framework scheduler
-scheduler.on("ready", function () {
-    scheduler.logger.info("Ready");
-    scheduler.subscribe();
-});
-
-// Capture "error" events
-scheduler.on("error", function (error) {
-    scheduler.logger.error("ERROR: " + JSON.stringify(error));
-    scheduler.logger.error(error.stack);
-});
-
-// Wait for the framework scheduler to be subscribed to the leading Mesos Master
-scheduler.once("subscribed", function (obj) {
-    restartHelper = new RestartHelper(scheduler, {"timeout": 300000});
-    // Instantiate API (pass the scheduler and framework configuration)
-    var api = require("./routes/api")(scheduler, frameworkConfiguration, restartHelper);
-
-    // Setup extended modules
-    if (moduleSetups) {
-        var index;
-        for (index = 0; index < moduleSetups.length; index += 1) {
-            moduleSetups[index](scheduler, frameworkConfiguration, api, app, restartHelper);
+    if (config.configVersion) {
+        if (config.TASK_DEF_NUM) {
+            frameworkConfiguration.tasks = populateTasks(config);
+            frameworkConfiguration.zkConfigOverwrite = true;
+            tasksDefined = true;
+        }
+        if (config.FRAMEWORK_LINKS) {
+            frameworkConfiguration.frameworkLinks = linkHelper.populateLinkConfig(config);
+            linksDefined = true;
+        }
+        frameworkConfiguration.configVersion = config.configVersion;
+    } else {
+        if (process.env.TASK_DEF_NUM) {
+            frameworkConfiguration.tasks = populateTasks();
+            tasksDefined = true;
+        }
+        if (process.env.FRAMEWORK_LINKS) {
+            frameworkConfiguration.frameworkLinks = linkHelper.populateLinkConfig();
+            linksDefined = true;
         }
     }
-    require("./routes/configApi")(api);
-    // Create routes
-    app.use("/api/" + config.application.apiVersion, api);
+    frameworkConfiguration.healthCheckTimeout = process.env.HEALTH_TIMEOUT || appConfig.application.healthTimeout;
+    if (process.env.AUTH_COOKIE_ENCRYPTION_KEY) {
+        frameworkConfiguration.userAuthSupport = true;
+    } else if (helpers.checkBooleanString(process.env.AUTH_DISABLED, false)) {
+        frameworkConfiguration.userAuthSupport = false;
+    } else {
+        console.log("ERROR: Authentication not configured and not disabled");
+        setTimeout(function () {
+            process.exit(1);
+        }, 120000);
+    }
+    if (Object.getOwnPropertyNames(envVars).length > 0) {
+        frameworkConfiguration.env = envVars;
+    }
+    var scheduler;
+    var envSet = false;
 
-    // Middleware for health check API
-    app.use(function (req, res, next) {
-        req.scheduler = scheduler;
-        req.frameworkConfiguration = frameworkConfiguration;
-        next();
+    function optionsHandler(options, callback) {
+        scheduler.logger.debug("Starting optionsHandler with: " + JSON.stringify(options));
+        if (options && options.env) {
+            Object.getOwnPropertyNames(options.env).forEach(function (property) {
+                propertyType = typeof options.env[property];
+                if ((!config.hasOwnProperty(property)) // Don't override existing configuration
+                    && property.toUpperCase() === property && (propertyType === "number" || propertyType === "string")) {
+                    scheduler.logger.debug("Setting env." + property + ": " + options.env[property]);
+                    process.env[property] = options.env[property];
+                } else {
+                    scheduler.logger.debug("NOT setting env." + property + ": " + options.env[property] + " type: " + propertyType);
+                }
+            });
+        }
+        envSet = true;
+        if (!tasksDefined) {
+            try {
+                options.tasks = populateTasks();
+                tasksDefined = true;
+            } catch (err) {
+                scheduler.logger.error("Error defining tasks: " + err.toString());
+            }
+        }
+        if (!linksDefined) {
+            options.frameworkLinks = linkHelper.populateLinkConfig();
+        }
+        if (tasksDefined) {
+            requireModules(scheduler);
+            callback();
+        } else {
+            scheduler.logger.info("Tasks were not defined, exiting.");
+            setTimeout(() => {
+                process.exit(1);
+            }, 120000);
+        }
+        scheduler.logger.debug("Ended optionsHandler");
+    }
+
+    frameworkConfiguration.optionsHandler = optionsHandler;
+
+    if (config.LOG_LEVEL) {
+        app.set("logLevel", config.LOG_LEVEL);
+        frameworkConfiguration.logging.level = config.LOG_LEVEL;
+    }
+
+    scheduler = new Scheduler(frameworkConfiguration);
+    var restartHelper;
+
+    // Start framework scheduler
+    scheduler.on("ready", function () {
+        // To set loggers that initialized already
+        if (config.LOG_LEVEL) {
+            app.set("logLevel", config.LOG_LEVEL);
+            scheduler.logModules.forEach(function (module) {
+                module.logger.transports.dailyRotateFile.level = config.LOG_LEVEL;
+                module.logger.transports.console.level = config.LOG_LEVEL;
+            });
+        }
+        scheduler.logger.info("Ready");
+        if (!envSet) {
+            requireModules(scheduler);
+        }
+        if (!tasksDefined) {
+            scheduler.logger.info("Tasks were not defined, exiting.");
+            setTimeout(function () {
+                process.exit(1);
+            }, 120000);
+        } else {
+            scheduler.subscribe();
+        }
     });
-    // /health endpoint for Marathon health checks
-    app.get("/health", baseApi.healthCheck);
-    ejs.setup(app);
-    app.get("/moduleList", baseApi.moduleList);
-});
 
-// Setting up the express server
-var server;
-server = app.listen(app.get("port"), app.get("host"), function () {
-    scheduler.logger.info("Express server listening on port " + server.address().port + " on " + server.address().address);
-});
+    // Capture "error" events
+    scheduler.on("error", function (error) {
+        scheduler.logger.error("ERROR: " + JSON.stringify(error));
+        scheduler.logger.error(error.stack);
+    });
 
-process.on("uncaughtException", function (error) {
-    scheduler.logger.error("Caught exception: ");
-    scheduler.logger.error(error.stack);
+    // Wait for the framework scheduler to be subscribed to the leading Mesos Master
+    scheduler.once("subscribed", function () {
+
+        linkHelper.linkCheckSetup(scheduler, frameworkConfiguration);
+        scheduler.sync();
+        scheduler.logger.debug("Subscribe sync issued");
+
+        if (process.env.SYNC_INTERVAL) {
+            setInterval(function () {
+                scheduler.sync();
+            }, process.env.SYNC_INTERVAL * 1000);
+        }
+
+        scheduler.logger.debug("Sync timer set up");
+        restartHelper = new RestartHelper(scheduler, {
+            "timeout": 300000,
+            "logging": {
+                "path": process.env.MESOS_SANDBOX + "/logs/",
+                "fileName": process.env.FRAMEWORK_NAME + ".log",
+                "level": app.get("logLevel")
+            }
+        });
+
+        scheduler.logger.debug("Restart helper set up");
+        // Instantiate API (pass the scheduler and framework configuration)
+        var api = require("./routes/api")(scheduler, frameworkConfiguration, restartHelper);
+        scheduler.logger.debug("API set up");
+
+        // Middleware for health check API - must stay before the modules setup
+        app.use(function (req, res, next) {
+            req.scheduler = scheduler;
+            req.frameworkConfiguration = frameworkConfiguration;
+            next();
+        });
+        scheduler.logger.debug("Middleware set up");
+
+        // Setup extended modules
+        if (moduleSetups) {
+            var index;
+            try {
+                for (index = 0; index < moduleSetups.length; index += 1) {
+                    moduleSetups[index](scheduler, frameworkConfiguration, api, app, restartHelper);
+                }
+            } catch (err) {
+                scheduler.logger.error("Modules could not be loaded: " + err.toString() + " exiting.");
+                setTimeout(function () {
+                    process.exit(1);
+                }, 120000);
+                return;
+            }
+        }
+        scheduler.logger.debug("Modules set up");
+        require("./routes/configApi")(api);
+
+        var bodyParser = require('body-parser');
+
+        app.use(bodyParser.json());
+        scheduler.logger.debug("Config API set up");
+        // Create routes
+        app.use("/api/" + appConfig.application.apiVersion, api);
+
+        scheduler.logger.debug("API set up");
+
+        // /health endpoint for Marathon health checks
+        app.get("/health", baseApi.healthCheck);
+
+        scheduler.logger.debug("Health check set up");
+        ejs.setup(app);
+
+        scheduler.logger.debug("EJS set up");
+        app.get("/moduleList", baseApi.moduleList);
+    });
+
+    // Setting up the express server
+    var server;
+    server = app.listen(app.get("port"), app.get("host"), function () {
+        scheduler.logger.info("Express server listening on port " + server.address().port + " on " + server.address().address);
+    });
+
+    process.on("uncaughtException", function (error) {
+        scheduler.logger.error("Caught exception: ");
+        scheduler.logger.error(error.stack);
+    });
 });

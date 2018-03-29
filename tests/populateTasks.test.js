@@ -33,7 +33,7 @@ describe("populateTasks", function () {
         } catch (error) {
             err = error;
         }
-        expect(err).to.be.an.error;
+        expect(err).to.be.an("error");
     });
     it("with minimal task vars", function () {
         process.env.TASK_DEF_NUM = "1";
@@ -51,9 +51,9 @@ describe("populateTasks", function () {
             err = error;
         }
         expect(tasks).to.be.an("object");
-        expect(err).to.not.be.an.error;
+        expect(err).to.not.be.an("error");
     });
-    it.skip("createTaskInfo with disallowed scaling", function () {
+    it("createTaskInfo with disallowed scaling", function () {
         process.env.TASK_DEF_NUM = "1";
         process.env.TASK0_NAME = "fsafsa";
         process.env.TASK0_NUM_INSTANCES = "2";
@@ -71,7 +71,7 @@ describe("populateTasks", function () {
         }
         expect(task).to.be.an("object");
         expect(task.allowScaling).to.be.false;
-        expect(err).to.not.be.an.error;
+        expect(err).to.not.be.an("error");
     });
     it("createTaskInfo with enabled scaling", function () {
         process.env.TASK_DEF_NUM = "1";
@@ -91,7 +91,8 @@ describe("populateTasks", function () {
         }
         expect(task).to.be.an("object");
         expect(task.allowScaling).to.be.true;
-        expect(err).to.not.be.an.error;
+        expect(task.instances).to.equal(2);
+        expect(err).to.not.be.an("error");
     });
     it("createTaskInfo with enabled scaling and URI", function () {
         process.env.TASK0_NAME = "fsafsa";
@@ -113,7 +114,7 @@ describe("populateTasks", function () {
         expect(task.allowScaling).to.be.true;
         expect(task.commandInfo.uris[0]).to.be.an("object");
         expect(task.commandInfo.uris[0].value).to.equal("fdsgfds");
-        expect(err).to.not.be.an.error;
+        expect(err).to.not.be.an("error");
     });
     it("createTaskInfo with enabled scaling and args", function () {
         process.env.TASK0_NAME = "fsafsa";
@@ -134,7 +135,7 @@ describe("populateTasks", function () {
         expect(task).to.be.an("object");
         expect(task.allowScaling).to.be.true;
         expect(task.commandInfo.arguments).to.be.an("array");
-        expect(err).to.not.be.an.error;
+        expect(err).to.not.be.an("error");
     });
     it("createTaskInfo with enabled scaling and ports", function () {
         process.env.TASK0_NAME = "fsafsa";
@@ -155,7 +156,7 @@ describe("populateTasks", function () {
         expect(task).to.be.an("object");
         expect(task.allowScaling).to.be.true;
         expect(task.resources.ports).to.equal(5);
-        expect(err).to.not.be.an.error;
+        expect(err).to.not.be.an("error");
     });
     it("createTaskInfo with enabled scaling and static ports", function () {
         process.env.TASK0_NAME = "fsafsa";
@@ -177,7 +178,7 @@ describe("populateTasks", function () {
         expect(task.allowScaling).to.be.true;
         expect(task.resources.staticPorts[0]).to.equal(5);
         expect(task.resources.staticPorts[1]).to.equal(32);
-        expect(err).to.not.be.an.error;
+        expect(err).to.not.be.an("error");
     });
     it("createTaskInfo with enabled scaling and health check", function () {
         process.env.TASK0_NAME = "fsafsa";
@@ -200,7 +201,7 @@ describe("populateTasks", function () {
         expect(task).to.be.an("object");
         expect(task.allowScaling).to.be.true;
         expect(task.noColocation).to.be.false;
-        expect(err).to.not.be.an.error;
+        expect(err).to.not.be.an("error");
     });
     it("createTaskInfo with enabled scaling and task env", function () {
         process.env.TASK0_NAME = "fsafsa";
@@ -221,7 +222,7 @@ describe("populateTasks", function () {
         expect(task).to.be.an("object");
         expect(task.allowScaling).to.be.true;
         expect(task.noColocation).to.be.false;
-        expect(err).to.not.be.an.error;
+        expect(err).to.not.be.an("error");
     });
     it("createTaskInfo with enabled scaling and no collocation", function () {
         process.env.TASK0_NAME = "fsafsa";
@@ -242,7 +243,7 @@ describe("populateTasks", function () {
         }
         expect(task).to.be.an("object");
         expect(task.noColocation).to.be.true;
-        expect(err).to.not.be.an.error;
+        expect(err).to.not.be.an("error");
     });
     it("createContainerInfo - basic", function () {
         process.env.TASK0_NAME = "fsafsa";
@@ -262,6 +263,6 @@ describe("populateTasks", function () {
         }
         expect(container).to.be.an("object");
         //expect(container.allowScaling).to.be.true;
-        expect(err).to.not.be.an.error;
+        expect(err).to.not.be.an("error");
     });
 });

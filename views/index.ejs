@@ -14,9 +14,9 @@
     <script src="bower_components/angular/angular.min.js" type="application/javascript"></script>
     <script src="bower_components/angular-resource/angular-resource.min.js" type="application/javascript"></script>
     <script src="bower_components/angular-route/angular-route.min.js" type="application/javascript"></script>
-    <script src="bower_components/angular-bootstrap/ui-bootstrap-tpls.min.js" type="application/javascript"></script>
     <script src="bower_components/angular-bootstrap/ui-bootstrap.min.js" type="application/javascript"></script>
     <script src="bower_components/json-formatter/dist/json-formatter.min.js"></script>
+    <!--<script src="bower_components/angular-tooltips/dist/angular-tooltips.js"></script>-->
     <script src="app/app.js" type="application/javascript"></script>
     <script src="app/config.js" type="application/javascript"></script>
     <script src="app/controllers.js" type="application/javascript"></script>
@@ -29,6 +29,9 @@
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
+<div id="unavailableoverlay" ng-show="serviceUnavailable">
+  <div id="unavailableoverlaytext">Service unavailable</div>
+</div>
 <div id="page-wrapper" ng-class="{'open': toggle}" ng-cloak="">
     <div id="sidebar-wrapper">
         <ul class="sidebar">
@@ -52,6 +55,9 @@
             </li>
             <li class="sidebar-list">
                 <a href="#/logs" ng-class="{active: $route.current.activeTab == 'logs'}">Logs<span class="menu-icon fa fa-folder"></span></a>
+            </li>
+            <li class="sidebar-list" ng-show="configuration.configVersion">
+                <a href="#/upgrade" ng-class="{active: $route.current.activeTab == 'upgrade'}">Upgrade<span class="menu-icon fa fa-chevron-circle-up"></span></a>
             </li>
             <li class="sidebar-list" ng-show="configuration.userAuthSupport">
                 <a href="./logout">Logout<span class="menu-icon fa fa-sign-out"></span></a>

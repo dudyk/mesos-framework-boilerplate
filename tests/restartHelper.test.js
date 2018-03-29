@@ -1,22 +1,17 @@
 "use strict";
 
 const fs = require("fs");
+var _ = require("lodash");
 var EventEmitter = require('events').EventEmitter;
 var util = require("util");
-var Scheduler;
-var Mesos;
-var helpers;
 
+var should = require('should');
+
+var mesosModule = require("../lib/helpers").getMesosModule();
 // Instantiate the mesos-framework module related objects
-if (fs.existsSync("../mesos-framework")) {
-    Scheduler = require("../mesos-framework").Scheduler;
-    Mesos = require("../mesos-framework").Mesos.getMesos();
-    helpers = require("../mesos-framework").helpers;
-} else {
-    Scheduler = require("mesos-framework").Scheduler;
-    Mesos = require("mesos-framework").Mesos.getMesos();
-    helpers = require("mesos-framework").helpers;
-}
+var helpers = mesosModule.helpers;
+var Scheduler = mesosModule.Scheduler;
+var Mesos = mesosModule.Mesos.getMesos();
 
 var RestartHelper = require("../lib/restartHelper");
 
@@ -52,34 +47,13 @@ describe("Restart task", function () {
 
     var runtimeInfo = {agentId: "agentId-before-restart"};
 
-    var task1 = {
-        "name": "vault-1",
-        "taskId": "12220-3440-12532-my-task",
-        "containerInfo": ContainerInfo,
-        "runtimeInfo": runtimeInfo,
-        "commandInfo": new Mesos.CommandInfo(
-            null, // URI
-            new Mesos.Environment([
-                new Mesos.Environment.Variable("FOO", "BAR1")
-            ]), // Environment
-            false, // Is shell?
-            null, // Command
-            null, // Arguments
-            null // User
-        ),
-        "resources": {
-            "cpus": 0.2,
-            "mem": 128,
-            "ports": 2,
-            "disk": 10
-        }
-    };
+    var task1;
 
     var task2 = {
         "name": "vault-2",
         "taskId": "12220-3440-12532-my-task2",
-        "containerInfo": ContainerInfo,
-        "runtimeInfo": runtimeInfo,
+        "containerInfo": _.cloneDeep(ContainerInfo),
+        "runtimeInfo": _.cloneDeep(runtimeInfo),
         "commandInfo": new Mesos.CommandInfo(
             null, // URI
             new Mesos.Environment([
@@ -101,8 +75,31 @@ describe("Restart task", function () {
     var task3 = {
         "name": "vault-3",
         "taskId": "12220-3440-12532-my-task3",
-        "containerInfo": ContainerInfo,
-        "runtimeInfo": runtimeInfo,
+        "containerInfo": _.cloneDeep(ContainerInfo),
+        "runtimeInfo": _.cloneDeep(runtimeInfo),
+        "commandInfo": new Mesos.CommandInfo(
+            null, // URI
+            new Mesos.Environment([
+                new Mesos.Environment.Variable("FOO", "BAR3")
+            ]), // Environment
+            false, // Is shell?
+            null, // Command
+            null, // Arguments
+            null // User
+        ),
+        "resources": {
+            "cpus": 0.2,
+            "mem": 128,
+            "ports": 2,
+            "disk": 10
+        }
+    };
+
+    var task4 = {
+        "name": "vault2-3",
+        "taskId": "12220-3440-12532-my-task3",
+        "containerInfo": _.cloneDeep(ContainerInfo),
+        "runtimeInfo": _.cloneDeep(runtimeInfo),
         "commandInfo": new Mesos.CommandInfo(
             null, // URI
             new Mesos.Environment([
@@ -125,34 +122,59 @@ describe("Restart task", function () {
         sandbox = sinon.sandbox.create();
         scheduler = sinon.createStubInstance(Scheduler);
         clock = sinon.useFakeTimers();
+        task1 = {
+            "name": "vault-1",
+            "taskId": "12220-3440-12532-my-task",
+            "containerInfo": _.cloneDeep(ContainerInfo),
+            "runtimeInfo": _.cloneDeep(runtimeInfo),
+            "commandInfo": new Mesos.CommandInfo(
+                null, // URI
+                new Mesos.Environment([
+                    new Mesos.Environment.Variable("FOO", "BAR1")
+                ]), // Environment
+                false, // Is shell?
+                null, // Command
+                null, // Arguments
+                null // User
+            ),
+            "resources": {
+                "cpus": 0.2,
+                "mem": 128,
+                "ports": 2,
+                "disk": 10
+            }
+        };
+        task2.runtimeInfo = _.cloneDeep(runtimeInfo);
     });
     afterEach(function () {
         sandbox.restore();
         clock.restore();
     });
 
-    it("Set useHealthcheck", function () {
-        var logger = helpers.getLogger(null, null, "debug");
+    it("setHealthCheck", function () {
+        function logFunction(message) {         console.log(message);     }
+        var logger = {info: logFunction, error: logFunction, debug: logFunction};
         var logspy = sinon.spy(logger, "debug");
 
         scheduler.logger = logger;
         scheduler.launchedTasks = [];
         scheduler.tasks = [task1];
-        var restartHelper = new RestartHelper(scheduler);
-        expect(restartHelper.useHealthcheck).to.be.false;
-        restartHelper.setUseHealthcheck(true);
-        expect(restartHelper.useHealthcheck).to.be.true;
+        var restartHelper = RestartHelper(scheduler, {logger: logger});
+        expect(restartHelper.useHealthCheck).to.be.false;
+        restartHelper.setHealthCheck({filter: "task", name: "healthy"});
+        expect(restartHelper.useHealthCheck).to.be.true;
+        expect(restartHelper.customHealthProperties).to.have.lengthOf(1);
     });
 
     it("Task was not found in launched", function () {
 
-        var logger = helpers.getLogger(null, null, "debug");
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
         var logspy = sinon.spy(logger, "debug");
 
         scheduler.logger = logger;
         scheduler.launchedTasks = [];
         scheduler.tasks = [task1];
-        var restartHelper = new RestartHelper(scheduler);
+        var restartHelper = new RestartHelper(scheduler, {logger: logger});
 
         restartHelper.restartTask("taskid-1111", false);
 
@@ -161,9 +183,26 @@ describe("Restart task", function () {
 
     });
 
+    it("Task was not found in defined", function () {
+
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
+        var logspy = sinon.spy(logger, "debug");
+
+        scheduler.logger = logger;
+        scheduler.launchedTasks = [task1];
+        scheduler.tasks = [task4];
+        var restartHelper = new RestartHelper(scheduler, {logger: logger});
+
+        restartHelper.restartTask(task1.taskId, false);
+
+        sinon.assert.calledOnce(logspy);
+        sinon.assert.calledWith(logspy, "Can't restart task that is not found." + JSON.stringify(scheduler.tasks));
+
+    });
+
     it("Offer for cloned not arrived yet", function (end) {
 
-        var logger = helpers.getLogger(null, null, "debug");
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
         var killSent = false;
 
         scheduler.logger = logger;
@@ -174,7 +213,7 @@ describe("Restart task", function () {
             killSent = true;
         };
 
-        var restartHelper = new RestartHelper(scheduler);
+        var restartHelper = new RestartHelper(scheduler, {logger: logger});
 
         restartHelper.restartTask(task1.taskId, false);
 
@@ -190,7 +229,7 @@ describe("Restart task", function () {
 
         this.timeout(5000);
 
-        var logger = helpers.getLogger(null, null, "debug");
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
         var killSent = false;
         function SchedulerStub() {
             // Inherit from EventEmitter
@@ -207,11 +246,15 @@ describe("Restart task", function () {
         scheduler.pendingTasks = [];
         scheduler.tasks = [task1];
         scheduler.options = {"useZk": "false"};
+        scheduler.taskHelper = {};
+        scheduler.taskHelper.saveTask = function (task) {
+            expect(task).to.be.an("object");
+        }
         scheduler.kill = function (taskId, agentId) {
             killSent = true;
         };
 
-        var restartHelper = new RestartHelper(scheduler);
+        var restartHelper = new RestartHelper(scheduler, {logger: logger});
 
         restartHelper.restartTask(task1.taskId, false);
 
@@ -241,9 +284,7 @@ describe("Restart task", function () {
 
     it("Cloned was launched - healthy", function (done) {
 
-        this.timeout(5000);
-
-        var logger = helpers.getLogger(null, null, "debug");
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
         var killSent = false;
         function SchedulerStub() {
             // Inherit from EventEmitter
@@ -264,7 +305,7 @@ describe("Restart task", function () {
             killSent = true;
         };
 
-        var restartHelper = new RestartHelper(scheduler, {"useHealthcheck": true});
+        var restartHelper = new RestartHelper(scheduler, {"useHealthCheck": true, "customHealthProperties": [{"filter": "^vault-[0-9]+$", "name": "healthy"}], logger: logger});
 
         restartHelper.restartTask(task1.taskId, false);
 
@@ -294,11 +335,64 @@ describe("Restart task", function () {
     });
 
 
+    it("Cloned was launched - healthy - no suffix in name", function (done) {
+
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
+        var killSent = false;
+        function SchedulerStub() {
+            // Inherit from EventEmitter
+            EventEmitter.call(this);
+            return this;
+        };
+
+        util.inherits(SchedulerStub, EventEmitter);
+
+        var scheduler = new SchedulerStub();
+
+        scheduler.logger = logger;
+        scheduler.launchedTasks = [task1];
+        scheduler.pendingTasks = [];
+        task1.name = "vault";
+        scheduler.tasks = [task1];
+        scheduler.options = {"useZk": "false"};
+        scheduler.kill = function (taskId, agentId) {
+            killSent = true;
+        };
+
+        var restartHelper = new RestartHelper(scheduler, {"useHealthCheck": true, "customHealthProperties": [{"filter": "^vault-?[0-9]*$", "name": "healthy"}], logger: logger});
+
+        restartHelper.restartTask(task1.taskId, false);
+
+        var interval = setInterval(function () {
+            if (scheduler.pendingTasks.length > 0) {
+                var task = scheduler.pendingTasks[0];
+                scheduler.pendingTasks[0].runtimeInfo = {
+                    agentId: "agent-1234",
+                    executorId: "exec-1234",
+                    state: "TASK_RUNNING",
+                    healthy: true
+                };
+                scheduler.launchedTasks.push(scheduler.pendingTasks.splice(0, 1));
+                scheduler.emit("task_launched", task);
+            }
+        }, 1000);
+
+        setTimeout(function () {
+            clearInterval(interval);
+            expect(killSent).to.equal(true);
+            done();
+        }, 3000);
+
+        clock.tick(1000);
+        clock.tick(1000);
+        clock.tick(1000);
+    });
+
     it("Cloned was launched - not healthy", function (done) {
 
         this.timeout(5000);
 
-        var logger = helpers.getLogger(null, null, "debug");
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
         var killSent = false;
         function SchedulerStub() {
             // Inherit from EventEmitter
@@ -319,7 +413,7 @@ describe("Restart task", function () {
             killSent = true;
         };
 
-        var restartHelper = new RestartHelper(scheduler, {"useHealthcheck": true});
+        var restartHelper = new RestartHelper(scheduler, {"useHealthCheck": true, "customHealthProperties": [{"filter": "^vault-[0-9]+$", "name": "healthy"}], logger: logger});
 
         restartHelper.restartTask(task1.taskId, false);
 
@@ -353,7 +447,7 @@ describe("Restart task", function () {
 
         var rollingRestartEnded = false;
 
-        var logger = helpers.getLogger(null, null, "debug");
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
 
         function SchedulerStub() {
             // Inherit from EventEmitter
@@ -378,7 +472,7 @@ describe("Restart task", function () {
             scheduler.launchedTasks.splice(scheduler.launchedTasks.indexOf(task), 1);
         };
 
-        var restartHelper = new RestartHelper(scheduler);
+        var restartHelper = new RestartHelper(scheduler, {logger: logger});
 
         scheduler.on("endrollingrestart", function () {
             rollingRestartEnded = true;
@@ -419,6 +513,254 @@ describe("Restart task", function () {
             clock.tick(1000);
         }
     });
+
+    it("Rolling restart - verify that take the first node", function (done) {
+        let tasks = [{taskId:'first'},{taskId:'second'},{taskId:'third'}];
+        let sandbox = sinon.sandbox.create();
+        let stubRestartTask = sandbox.stub();
+        let StubDebug = sandbox.stub();
+        let logger = {debug:StubDebug};
+
+        function SchedulerStub() {
+            // Inherit from EventEmitter
+            EventEmitter.call(this);
+            return this;
+        };
+
+        util.inherits(SchedulerStub, EventEmitter);
+
+        var scheduler = new SchedulerStub();
+        scheduler.logger = logger;
+
+        this.restartTask  = stubRestartTask;
+        let restartHelper = new RestartHelper(scheduler, {logger: logger,restartTask:stubRestartTask});
+        restartHelper.restartTask  = stubRestartTask;
+        restartHelper.rollingRestart(tasks);
+        stubRestartTask.withArgs('first').calledOnce.should.equal(true);
+        done();
+    });
+
+    it("Kill task - not scaleable", function (done) {
+
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
+        var killSent = false;
+        function SchedulerStub() {
+            // Inherit from EventEmitter
+            EventEmitter.call(this);
+            return this;
+        };
+
+        util.inherits(SchedulerStub, EventEmitter);
+
+        var scheduler = new SchedulerStub();
+
+        scheduler.logger = logger;
+        scheduler.launchedTasks = [task1, task2];
+        scheduler.pendingTasks = [];
+        task1.name = "vault";
+        scheduler.tasks = [task1];
+        scheduler.options = {"useZk": "false"};
+        scheduler.kill = function (taskId, agentId) {
+            killSent = true;
+        };
+
+        var restartHelper = new RestartHelper(scheduler, {"useHealthCheck": true, "customHealthProperties": [{"filter": "^vault-[0-9]+$", "name": "healthy"}], logger: logger});
+
+        restartHelper.killTask(task1.taskId, false);
+
+        setTimeout(function () {
+            expect(killSent).to.equal(false);
+            done();
+        }, 1000);
+
+        clock.tick(1000);
+    });
+
+    it("Kill task - scaleable alone", function (done) {
+
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
+        var killSent = false;
+        function SchedulerStub() {
+            // Inherit from EventEmitter
+            EventEmitter.call(this);
+            return this;
+        };
+
+        util.inherits(SchedulerStub, EventEmitter);
+
+        var scheduler = new SchedulerStub();
+
+        scheduler.logger = logger;
+        task1.allowScaling = true;
+        scheduler.launchedTasks = [task1];
+        scheduler.pendingTasks = [];
+        task1.name = "vault";
+        scheduler.tasks = [task1];
+        scheduler.options = {"useZk": "false"};
+        scheduler.kill = function (taskId, agentId) {
+            killSent = true;
+        };
+
+        var restartHelper = new RestartHelper(scheduler, {"useHealthCheck": true, "customHealthProperties": [{"filter": "^vault-[0-9]+$", "name": "healthy"}], logger: logger});
+
+        restartHelper.killTask(task1.taskId, false);
+
+        setTimeout(function () {
+            expect(killSent).to.equal(true);
+            done();
+        }, 1000);
+
+        clock.tick(1000);
+    });
+    it("Kill task - scaleable pending", function (done) {
+
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
+        var killSent = false;
+        function SchedulerStub() {
+            // Inherit from EventEmitter
+            EventEmitter.call(this);
+            return this;
+        };
+
+        util.inherits(SchedulerStub, EventEmitter);
+
+        var scheduler = new SchedulerStub();
+
+        scheduler.logger = logger;
+        task1.allowScaling = true;
+        scheduler.launchedTasks = [task1];
+        scheduler.pendingTasks = [task2];
+        task1.name = "vault";
+        scheduler.tasks = [task1];
+        scheduler.options = {"useZk": "false"};
+        scheduler.kill = function (taskId, agentId) {
+            killSent = true;
+        };
+
+        var restartHelper = new RestartHelper(scheduler, {"useHealthCheck": true, "customHealthProperties": [{"filter": "^vault-[0-9]+$", "name": "healthy"}], logger: logger});
+
+        restartHelper.killTask(task1.taskId, false);
+
+        setTimeout(function () {
+            expect(killSent).to.equal(true);
+            done();
+        }, 1000);
+
+        clock.tick(1000);
+    });
+
+    it("Kill task - scaleable launched", function (done) {
+
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
+        var killSent = false;
+        function SchedulerStub() {
+            // Inherit from EventEmitter
+            EventEmitter.call(this);
+            return this;
+        };
+
+        util.inherits(SchedulerStub, EventEmitter);
+
+        var scheduler = new SchedulerStub();
+
+        scheduler.logger = logger;
+        task1.allowScaling = true;
+        scheduler.launchedTasks = [task1, task2];
+        scheduler.pendingTasks = [];
+        //task1.name = "vault";
+        scheduler.tasks = [task1];
+        scheduler.options = {"useZk": "false"};
+        scheduler.kill = function (taskId, agentId) {
+            killSent = true;
+        };
+
+        var restartHelper = new RestartHelper(scheduler, {logger: logger});
+
+        console.log(restartHelper.killTask(task1.taskId, false));
+
+        setTimeout(function () {
+            expect(killSent).to.equal(true);
+            done();
+        }, 1000);
+
+        clock.tick(1000);
+    });
+
+    it("Kill task - scaleable launched restarting", function (done) {
+
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
+        var killSent = false;
+        function SchedulerStub() {
+            // Inherit from EventEmitter
+            EventEmitter.call(this);
+            return this;
+        };
+
+        util.inherits(SchedulerStub, EventEmitter);
+
+        var scheduler = new SchedulerStub();
+
+        scheduler.logger = logger;
+        task1.allowScaling = true;
+        scheduler.launchedTasks = [task1, task2];
+        scheduler.pendingTasks = [];
+        task2.runtimeInfo.doNotRestart = true;
+        scheduler.tasks = [task1];
+        scheduler.options = {"useZk": "false"};
+        scheduler.kill = function (taskId, agentId) {
+            killSent = true;
+        };
+
+        var restartHelper = new RestartHelper(scheduler, {logger: logger});
+
+        console.log(restartHelper.killTask(task1.taskId, false));
+
+        setTimeout(function () {
+            expect(killSent).to.equal(true);
+            done();
+        }, 1000);
+
+        clock.tick(1000);
+    });
+
+    it("Kill task - scaleable not running", function (done) {
+
+        function logFunction(message) {         console.log(message);     }     var logger = {info: logFunction, error: logFunction, debug: logFunction};
+        var killSent = false;
+        function SchedulerStub() {
+            // Inherit from EventEmitter
+            EventEmitter.call(this);
+            return this;
+        };
+
+        util.inherits(SchedulerStub, EventEmitter);
+
+        var scheduler = new SchedulerStub();
+
+        scheduler.logger = logger;
+        task1.allowScaling = true;
+        scheduler.launchedTasks = [task1];
+        scheduler.pendingTasks = [];
+        task1.name = "vault";
+        scheduler.tasks = [task1];
+        scheduler.options = {"useZk": "false"};
+        scheduler.kill = function (taskId, agentId) {
+            killSent = true;
+        };
+
+        var restartHelper = new RestartHelper(scheduler, {"useHealthCheck": true, "customHealthProperties": [{"filter": "^vault-[0-9]+$", "name": "healthy"}], logger: logger});
+
+        restartHelper.killTask(task2.taskId, false);
+
+        setTimeout(function () {
+            expect(killSent).to.equal(false);
+            done();
+        }, 1000);
+
+        clock.tick(1000);
+    });
+
+
 
 });
 
