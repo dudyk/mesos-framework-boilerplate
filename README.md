@@ -70,9 +70,10 @@ A `tasks` sub-object can contain objects with task information:
 * `commandInfo`: A [Mesos.CommandInfo](https://github.com/apache/mesos/blob/c6e9ce16850f69fda719d4e32be3f2a2e1d80387/include/mesos/v1/mesos.proto#L397) definition (**mandatory**).
 * `containerInfo`: A [Mesos.ContainerInfo](https://github.com/apache/mesos/blob/c6e9ce16850f69fda719d4e32be3f2a2e1d80387/include/mesos/v1/mesos.proto#L1744) definition.
 * `executorInfo`: A [Mesos.ExecutorInfo](https://github.com/apache/mesos/blob/c6e9ce16850f69fda719d4e32be3f2a2e1d80387/include/mesos/v1/mesos.proto#L460) definition.
-* `resources`: The object of [Mesos.Resource](https://github.com/apache/mesos/blob/c6e9ce16850f69fda719d4e32be3f2a2e1d80387/include/mesos/v1/mesos.proto#L641) types, such as `cpu`, `mem`, `ports` and `disk` (**mandatory**) with an optional fixedPorts number array (included in the general port count).
+* `resources`: The object of [Mesos.Resource](https://github.com/apache/mesos/blob/c6e9ce16850f69fda719d4e32be3f2a2e1d80387/include/mesos/v1/mesos.proto#L641) types, such as `cpu`, `mem`, `ports` and `disk` (**mandatory**) with an optional fixedPorts number array (included in the general port count) and an optional minimumPort property to limit the dynamic port allocation.
 * `portMappings`: The array of portMapping objects, each containing a numeric `port` value (for container ports), and a `protocol` string (either `tcp` or `udp`). 
 * `healthChecks`: A [Mesos.HealthCheck](https://github.com/apache/mesos/blob/c6e9ce16850f69fda719d4e32be3f2a2e1d80387/include/mesos/v1/mesos.proto#L302) definition.
+* `noColocation`: A boolean value which indicates whether this task is not allowed to run on the same agent as the scheduler itself, recommended on production installations (default: `false`).
 * `labels`: A [Mesos.Labels](https://github.com/apache/mesos/blob/c6e9ce16850f69fda719d4e32be3f2a2e1d80387/include/mesos/v1/mesos.proto#L1845) definition.
 
 #### High availability
@@ -119,6 +120,7 @@ The following events from the Scheduler calls are exposed:
 * `updated_task`: Is emitted when a task was updated. Contains an object with `taskId`, `executorId` and `state`.  
 * `removed_task`: Is emitted when a task was removed. Contains the `taskId`.
 * `task_launched`: Is emitted when a task moves to the running state, to handle initialization. Contains the task structure.
+* `task_ended`: Is emitted when a task has ended, no matter the reason. Contains the task structure or a minimal task structure with a taskId and a runtimeInfo with agentId (when an unknown task is killed).
 
 #### Example
 

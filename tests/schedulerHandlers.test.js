@@ -9,6 +9,7 @@ var util = require("util");
 var EventEmitter = require("events").EventEmitter;
 var path = require("path");
 var Mesos = require("../lib/mesos")().getMesos();
+var envs = require("../lib/envs");
 
 // Testing require
 var expect = require("chai").expect;
@@ -38,6 +39,7 @@ describe("Offers handlers tests", function () {
     };
 
     var offers;
+    var inverseOffers;
 
     var ContainerInfo = new Mesos.ContainerInfo(
         Mesos.ContainerInfo.Type.DOCKER, // Type
@@ -60,10 +62,14 @@ describe("Offers handlers tests", function () {
     );
 
     var task1;
-
+    var beforeEnv;
+    var beforeEnvs;
     beforeEach(function () {
+        accept = true;
+        beforeEnv = helpers.cloneDeep(process.env);
+        beforeEnvs = helpers.cloneDeep(envs);
         task1 = {
-            "name": "My Task-121",
+            "name": "mytask-121",
             "task_id": {"value": "12220-3440-12532-my-task"},
             "containerInfo": ContainerInfo,
             "commandInfo": new Mesos.CommandInfo(
@@ -86,6 +92,7 @@ describe("Offers handlers tests", function () {
                 "disk": 10
             }
         };
+
         offers = {
             "type": "OFFERS",
             "offers": [
@@ -140,11 +147,32 @@ describe("Offers handlers tests", function () {
                 }
             ]
         };
+
+        inverseOffers  = {
+            inverse_offers: [ {id: "12214-23523-4444"}, {id: "12214-23523-4445"}]
+        };
+    });
+
+    afterEach(function () {
+        process.env = beforeEnv;
     });
 
     util.inherits(SchedulerStub, EventEmitter);
 
     before(function () {
+
+        scheduler.cleanLocationsMap = function(task){
+            return;
+        };
+
+        scheduler.cleanAzMap = function(task){
+            return;
+        };
+
+        scheduler.addLocationsMap = function(task){
+            return;
+        };
+
         scheduler.decline = function (offers, filters) {
             console.log("Decline the offer");
             accept = false;
@@ -163,16 +191,19 @@ describe("Offers handlers tests", function () {
 
         handlers["OFFERS"].call(scheduler, offers);
 
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(false);
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
 
-    it("Recive an offer while suitable task is pending", function (done) {
+    it("Recive an offer while suitable task is pending, colocation allowed", function (done) {
 
         var logger = helpers.getLogger(null, null, "debug");
+
+        task1.noColocation = false;
+        envs.HOST = process.env.HOST = "127.0.0.1";
 
         scheduler.pendingTasks = [task1];
         scheduler.launchedTasks = [];
@@ -182,19 +213,21 @@ describe("Offers handlers tests", function () {
 
         handlers["OFFERS"].call(scheduler, offers);
 
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(scheduler.launchedTasks.length).to.equal(1);
             expect(scheduler.launchedTasks[0].runtimeInfo.agentId).to.equal("12325-23523-S23523");
-            expect(scheduler.launchedTasks[0].mesosName).to.equal("My Task-121");
+            expect(scheduler.launchedTasks[0].mesosName).to.equal("mytask-121");
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
 
-    it("Recive an offer while suitable task is pending - no serialNumberedTasks", function (done) {
+    it("Recive an offer while suitable task is pending - no serialNumberedTasks, colocation allowed", function (done) {
 
         var logger = helpers.getLogger(null, null, "debug");
+        task1.noColocation = false;
+        envs.HOST = process.env.HOST = "bla.mesos";
 
         scheduler.pendingTasks = [task1];
         scheduler.launchedTasks = [];
@@ -205,13 +238,118 @@ describe("Offers handlers tests", function () {
 
         handlers["OFFERS"].call(scheduler, offers);
 
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(scheduler.launchedTasks.length).to.equal(1);
             expect(scheduler.launchedTasks[0].runtimeInfo.agentId).to.equal("12325-23523-S23523");
-            expect(scheduler.launchedTasks[0].mesosName).to.equal("My Task");
+            expect(scheduler.launchedTasks[0].mesosName).to.equal("mytask");
             done();
-        }, 100); //timeout with an error in one second
+        });
+    });
+
+    it("Recive an offer without colocation IP issue", function (done) {
+
+        task1.noColocation = true;
+        envs.HOST = process.env.HOST = "127.0.0.2";
+
+        var logger = helpers.getLogger(null, null, "debug");
+        scheduler.pendingTasks = [task1];
+        scheduler.launchedTasks = [];
+        scheduler.logger = logger;
+        scheduler.frameworkId = "12124-235325-32425";
+        scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true}
+        handlers["OFFERS"].call(scheduler, offers);
+        setImmediate(function () {
+            expect(accept).to.equal(true);
+            expect(scheduler.launchedTasks.length).to.equal(1);
+            expect(scheduler.launchedTasks[0].runtimeInfo.agentId).to.equal("12325-23523-S23523");
+            expect(scheduler.launchedTasks[0].mesosName).to.equal("mytask-121");
+            done();
+        });
+    });
+
+    it("Recive an offer with colocation IP issue", function (done) {
+
+        task1.noColocation = true;
+        envs.HOST = process.env.HOST = "127.0.0.1";
+
+        var logger = helpers.getLogger(null, null, "debug");
+        scheduler.pendingTasks = [task1];
+        scheduler.launchedTasks = [];
+        scheduler.logger = logger;
+        scheduler.frameworkId = "12124-235325-32425";
+        scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true}
+        handlers["OFFERS"].call(scheduler, offers);
+        setImmediate(function () {
+            expect(accept).to.equal(false);
+            expect(scheduler.launchedTasks.length).to.equal(0);
+            done();
+        });
+    });
+
+
+    it("Recive an offer with inner colocation IP issue", function (done) {
+
+        task1.noColocation = false;
+        task1.noInnerColocation = true;
+        envs.HOST = process.env.HOST = "127.0.0.1";
+
+        scheduler.locationsMap = {"mytask": ["127.0.0.1"]};
+
+        var logger = helpers.getLogger(null, null, "debug");
+        scheduler.pendingTasks = [task1];
+        scheduler.launchedTasks = [];
+        scheduler.logger = logger;
+        scheduler.frameworkId = "12124-235325-32425";
+        scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": false}
+        handlers["OFFERS"].call(scheduler, offers);
+        setImmediate(function () {
+            expect(accept).to.equal(false);
+            expect(scheduler.launchedTasks.length).to.equal(0);
+            console.log(scheduler.pendingTasks[0].commandInfo.environment.variables);
+            done();
+        });
+    });
+
+    it("Recive an offer without inner colocation IP issue", function (done) {
+
+        task1.noColocation = false;
+        task1.noInnerColocation = false;
+        envs.HOST = process.env.HOST = "127.0.0.1";
+
+        scheduler.locationsMap = {"mytask": ["127.0.0.1"]};
+
+        var logger = helpers.getLogger(null, null, "debug");
+        scheduler.pendingTasks = [task1];
+        scheduler.launchedTasks = [];
+        scheduler.logger = logger;
+        scheduler.frameworkId = "12124-235325-32425";
+        scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true}
+        handlers["OFFERS"].call(scheduler, offers);
+        setImmediate(function () {
+            expect(accept).to.equal(true);
+            expect(scheduler.launchedTasks.length).to.equal(1);
+            done();
+        });
+    });
+
+    it("Recive an offer with colocation hostname issue", function (done) {
+
+        task1.noColocation = true;
+        envs.HOST = process.env.HOST = "bla.mesos";
+
+        var logger = helpers.getLogger(null, null, "debug");
+        scheduler.pendingTasks = [task1];
+        scheduler.launchedTasks = [];
+        scheduler.logger = logger;
+        scheduler.frameworkId = "12124-235325-32425";
+        scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true}
+        handlers["OFFERS"].call(scheduler, offers);
+        setImmediate(function () {
+            expect(accept).to.equal(false);
+            expect(scheduler.launchedTasks.length).to.equal(0);
+            done();
+        });
     });
 
     it("Recive an offer with insufficient ports", function (done) {
@@ -225,12 +363,12 @@ describe("Offers handlers tests", function () {
         scheduler.frameworkId = "12124-235325-32425";
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true}
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(false);
             expect(scheduler.launchedTasks.length).to.equal(0);
             expect(scheduler.pendingTasks[0].commandInfo.environment.variables).to.have.lengthOf(1);
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer with no ports, with no disk", function (done) {
@@ -254,12 +392,12 @@ describe("Offers handlers tests", function () {
         };
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(saved).to.be.true;
             expect(scheduler.launchedTasks.length).to.equal(1);
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
     it("Recive an offer with static ports of one range", function (done) {
         task1.resources.ports = 2;
@@ -282,7 +420,7 @@ describe("Offers handlers tests", function () {
         };
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(saved).to.be.true;
             expect(scheduler.launchedTasks.length).to.equal(1);
@@ -291,7 +429,7 @@ describe("Offers handlers tests", function () {
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].name).to.equal("PORT1");
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].value).to.equal("8082");
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer with static ports of one range and dynamic ports on the rest", function (done) {
@@ -306,7 +444,7 @@ describe("Offers handlers tests", function () {
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(scheduler.launchedTasks.length).to.equal(1);
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[1].name).to.equal("PORT0");
@@ -314,7 +452,7 @@ describe("Offers handlers tests", function () {
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].name).to.equal("PORT1");
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].value).to.equal("8082");
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer with static ports of one range and dynamic ports on the rest", function (done) {
@@ -329,7 +467,7 @@ describe("Offers handlers tests", function () {
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(scheduler.launchedTasks.length).to.equal(1);
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[1].name).to.equal("PORT0");
@@ -337,7 +475,7 @@ describe("Offers handlers tests", function () {
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].name).to.equal("PORT1");
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].value).to.equal("9019");
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
     it("Recive an offer with static ports of one range (first range) and dynamic ports on the rest", function (done) {
         task1.resources.ports = 31;
@@ -351,7 +489,7 @@ describe("Offers handlers tests", function () {
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(scheduler.launchedTasks.length).to.equal(1);
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[1].name).to.equal("PORT0");
@@ -359,11 +497,11 @@ describe("Offers handlers tests", function () {
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].name).to.equal("PORT1");
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].value).to.equal("7001");
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer with " +
-        "static ports of one range and dynamic ports on the rest - fail", function (done) {
+    "static ports of one range and dynamic ports on the rest - fail", function (done) {
         task1.resources.ports = 42;
         task1.resources.staticPorts = [8090, 9019];
 
@@ -375,11 +513,11 @@ describe("Offers handlers tests", function () {
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(false);
             expect(scheduler.launchedTasks.length).to.equal(0);
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer with static ports of two ranges", function (done) {
@@ -394,7 +532,7 @@ describe("Offers handlers tests", function () {
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(scheduler.launchedTasks.length).to.equal(1);
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables).to.have.lengthOf(4);
@@ -403,7 +541,7 @@ describe("Offers handlers tests", function () {
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].name).to.equal("PORT1");
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].value).to.equal("9001");
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer with static ports of two ranges and dynamic ports that fill more than one range", function (done) {
@@ -418,7 +556,7 @@ describe("Offers handlers tests", function () {
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(scheduler.launchedTasks.length).to.equal(1);
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables).to.have.length.above(31);
@@ -427,7 +565,7 @@ describe("Offers handlers tests", function () {
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].name).to.equal("PORT1");
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].value).to.equal("9001");
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer unknown range resource", function (done) {
@@ -435,22 +573,22 @@ describe("Offers handlers tests", function () {
         task1.resources.staticPorts = [8080,9001];
         task1.commandInfo.environment = [];
         offers.offers[0].resources[4] = {
-                            "name": "portsa",
-                            "role": "*",
-                            "type": "RANGES",
-                            "ranges": {
-                                "range": [
-                                    {
-                                        "begin": 8080,
-                                        "end": 8090
-                                    },
-                                    {
-                                        "begin": 9000,
-                                        "end": 9019
-                                    }
-                                ]
-                            }
-                        };
+            "name": "portsa",
+            "role": "*",
+            "type": "RANGES",
+            "ranges": {
+                "range": [
+                    {
+                        "begin": 8080,
+                        "end": 8090
+                    },
+                    {
+                        "begin": 9000,
+                        "end": 9019
+                    }
+                ]
+            }
+        };
 
         var logger = helpers.getLogger(null, null, "debug");
         scheduler.pendingTasks = [task1];
@@ -460,7 +598,7 @@ describe("Offers handlers tests", function () {
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(scheduler.launchedTasks.length).to.equal(1);
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables).to.have.lengthOf(3);
@@ -470,7 +608,7 @@ describe("Offers handlers tests", function () {
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[1].value).to.equal("9001");
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].name).to.equal("HOST");
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer with no environment - static ports", function (done) {
@@ -486,7 +624,7 @@ describe("Offers handlers tests", function () {
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(scheduler.launchedTasks.length).to.equal(1);
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables).to.have.lengthOf(3);
@@ -496,7 +634,7 @@ describe("Offers handlers tests", function () {
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[1].value).to.equal("9001");
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].name).to.equal("HOST");
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer with no containerInfo - with lables - static ports", function (done) {
@@ -514,7 +652,7 @@ describe("Offers handlers tests", function () {
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(scheduler.launchedTasks.length).to.equal(1);/*
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables).to.have.lengthOf(3);
@@ -524,7 +662,7 @@ describe("Offers handlers tests", function () {
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[1].value).to.equal("9001");
             expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].name).to.equal("HOST");*/
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer with static ports of two ranges, decline", function (done) {
@@ -540,12 +678,12 @@ describe("Offers handlers tests", function () {
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": false};
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(false);
             expect(scheduler.launchedTasks.length).to.equal(0);
             expect(scheduler.pendingTasks[0].commandInfo.environment.variables).to.have.lengthOf(1);
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer with static ports of two ranges, decline below", function (done) {
@@ -561,17 +699,17 @@ describe("Offers handlers tests", function () {
         scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": false};
         scheduler.options.staticPorts = true;
         handlers["OFFERS"].call(scheduler, offers);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(false);
             expect(scheduler.launchedTasks.length).to.equal(0);
             expect(scheduler.pendingTasks[0].commandInfo.environment.variables).to.have.lengthOf(1);
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
     it("Recive an offer while suitable task with runtimeInfo is pending", function (done) {
 
-        var runtimeInfo = {agentId: "12345"}
+        var runtimeInfo = {agentId: "12345"};
         task1.runtimeInfo = runtimeInfo;
 
         var logger = helpers.getLogger(null, null, "debug");
@@ -585,14 +723,60 @@ describe("Offers handlers tests", function () {
 
         handlers["OFFERS"].call(scheduler, offers);
 
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(true);
             expect(scheduler.launchedTasks.length).to.equal(1);
             expect(scheduler.launchedTasks[0].runtimeInfo.agentId).to.equal("12325-23523-S23523");
             done();
-        }, 100); //timeout with an error in one second
+        });
     });
 
+    it("Recive an offer while suitable task with bridge networking is pending", function (done) {
+
+        task1.containerInfo.docker.network = "BRIDGE";
+        task1.portMappings = [{"port": 32423, protocol: "tcp"}];
+
+        var logger = helpers.getLogger(null, null, "debug");
+
+        scheduler.pendingTasks = [task1];
+        scheduler.launchedTasks = [];
+        scheduler.logger = logger;
+        scheduler.frameworkId = "12124-235325-32425";
+        scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
+        //scheduler.staticPorts = [];
+
+        handlers["OFFERS"].call(scheduler, offers);
+
+        setImmediate(function () {
+            expect(accept).to.equal(true);
+            expect(scheduler.launchedTasks.length).to.equal(1);
+            expect(scheduler.launchedTasks[0].runtimeInfo.agentId).to.equal("12325-23523-S23523");
+            done();
+        });
+    });
+
+    it("Recive an offer while suitable task with bridge networking is pending - no match", function (done) {
+
+        task1.containerInfo.docker.network = "BRIDGE";
+        task1.portMappings = [{"port": 32423, protocol: "tcp"}, {"port": 3223, protocol: "tcp"}];
+
+        var logger = helpers.getLogger(null, null, "debug");
+
+        scheduler.pendingTasks = [task1];
+        scheduler.launchedTasks = [];
+        scheduler.logger = logger;
+        scheduler.frameworkId = "12124-235325-32425";
+        scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
+        //scheduler.staticPorts = [];
+
+        handlers["OFFERS"].call(scheduler, offers);
+
+        setImmediate(function () {
+            expect(accept).to.equal(true);
+            expect(scheduler.launchedTasks.length).to.equal(1);
+            done();
+        });
+    });
 
     it("Recive an offer while unsuitable task is pending", function (done) {
 
@@ -608,11 +792,73 @@ describe("Offers handlers tests", function () {
 
         handlers["OFFERS"].call(scheduler, offers);
 
-        setTimeout(function () {
+        setImmediate(function () {
             expect(accept).to.equal(false);
             expect(scheduler.pendingTasks[0].commandInfo.environment.variables).to.have.lengthOf(1);
             done();
-        }, 100); //timeout with an error in one second
+        });
+    });
+
+
+    it("Recive an offer with static ports of two ranges and dynamic ports that fill more than one range - minimal port", function (done) {
+        task1.resources.ports = 3;
+        var task2 = helpers.cloneDeep(task1);
+        task2.resources.minimumPort = 8088;
+        task1.resources.staticPorts = [8081,9001];
+
+        var logger = helpers.getLogger(null, null, "debug");
+        scheduler.pendingTasks = [task1, task2];
+        scheduler.launchedTasks = [];
+        scheduler.logger = logger;
+        scheduler.frameworkId = "12124-235325-32425";
+        scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true};
+        scheduler.options.staticPorts = true;
+        handlers["OFFERS"].call(scheduler, offers);
+        setImmediate(function () {
+            setImmediate(function () {
+                expect(scheduler.launchedTasks.length).to.equal(2);
+                expect(scheduler.launchedTasks[1].runtimeInfo.network.ports[0]).to.equal(task2.resources.minimumPort);
+                expect(scheduler.launchedTasks[1].commandInfo.environment.variables[1].value).to.equal("8088");
+                done();
+            });
+            expect(accept).to.equal(true);
+            expect(scheduler.launchedTasks[0].commandInfo.environment.variables).to.have.length.above(2);
+            expect(scheduler.launchedTasks[0].commandInfo.environment.variables[1].name).to.equal("PORT0");
+            expect(scheduler.launchedTasks[0].commandInfo.environment.variables[1].value).to.equal("8081");
+            expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].name).to.equal("PORT1");
+            expect(scheduler.launchedTasks[0].commandInfo.environment.variables[2].value).to.equal("9001");
+        });
+    });
+
+    it("Recive an offer with an exception", function (done) {
+        //task1.commandInfo = helpers.stringifyEnumsRecursive(task1.commandInfo);
+
+        var logger = helpers.getLogger(null, null, "debug");
+        scheduler.pendingTasks = undefined;//[task1];
+        scheduler.launchedTasks = [];
+        scheduler.logger = logger;
+        scheduler.frameworkId = "12124-235325-32425";
+        scheduler.options = {"frameworkName": "myfmw", "serialNumberedTasks": true}
+        handlers["OFFERS"].call(scheduler, offers);
+        setImmediate(function () {
+            expect(accept).to.equal(false);
+            expect(scheduler.launchedTasks.length).to.equal(0);
+            //expect(scheduler.pendingTasks[0].commandInfo.environment.variables).to.have.lengthOf(3);
+            done();
+        });
+    });
+
+    it("Recive an inverse offer and decline it", function (done) {
+        scheduler.pendingTasks = [];
+        var logger = helpers.getLogger(null, null, "debug");
+        scheduler.logger = logger;
+
+        handlers["INVERSE_OFFERS"].call(scheduler, inverseOffers);
+
+        setImmediate(function () {
+            expect(accept).to.equal(false);
+            done();
+        });
     });
 });
 
@@ -624,21 +870,22 @@ describe("Update handlers tests", function () {
     var runtimeInfo;
     var task1;
     var scheduler;
+    var endedCalled;
 
     function SchedulerStub() {
         // Inherit from EventEmitter
         EventEmitter.call(this);
         return this;
-    };
+    }
 
     util.inherits(SchedulerStub, EventEmitter);
 
     beforeEach(function () {
         acknowleged = false;
         killed = false;
-        runtimeInfo = {agentId: "12345", executorId: "5457"}
+        runtimeInfo = {agentId: "12345", executorId: "5457"};
         task1 = {
-            "name": "my-task",
+            "name": "my-task-1",
             "taskId": "12344-my-task",
             "runtimeInfo": runtimeInfo,
             "commandInfo": new Mesos.CommandInfo(
@@ -669,9 +916,9 @@ describe("Update handlers tests", function () {
         scheduler = new SchedulerStub();
 
         /**
-         * Acknowledge a status update.
-         * @param {object} update The status update to acknowledge.
-         */
+        * Acknowledge a status update.
+        * @param {object} update The status update to acknowledge.
+        */
         scheduler.acknowledge = function (update) {
 
             if (!update.status.uuid) {
@@ -683,8 +930,20 @@ describe("Update handlers tests", function () {
         };
 
         scheduler.kill = function (taskId, agentId) {
-            killed = true
+            killed = true;
         };
+        endedCalled = false;
+        scheduler.once("task_ended", function (task) {
+            endedCalled = true;
+        });
+
+        scheduler.cleanLocationsMap = function(task){
+            return;
+        }
+
+        scheduler.cleanAzMap = function(task) {
+            return;
+        }
 
     });
 
@@ -716,10 +975,10 @@ describe("Update handlers tests", function () {
         };
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(acknowleged).to.equal(false);
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -748,10 +1007,10 @@ describe("Update handlers tests", function () {
         }
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(acknowleged).to.equal(true);
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -774,7 +1033,7 @@ describe("Update handlers tests", function () {
         var taskHelper = sinon.createStubInstance(TaskHelper);
         scheduler.taskHelper = taskHelper;
 
-        var runtimeInfo = {agentId: "12345"}
+        runtimeInfo = {agentId: "12345"};
 
         scheduler.pendingTasks = [];
         scheduler.launchedTasks = [task1];
@@ -788,10 +1047,11 @@ describe("Update handlers tests", function () {
         scheduler.options.useZk = false;
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(scheduler.launchedTasks.length).to.equal(0);
+            expect(endedCalled).to.be.true;
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -814,7 +1074,7 @@ describe("Update handlers tests", function () {
         var taskHelper = sinon.createStubInstance(TaskHelper);
         scheduler.taskHelper = taskHelper;
 
-        var runtimeInfo = {agentId: "12345"}
+        runtimeInfo = {agentId: "12345"};
 
         scheduler.pendingTasks = [];
         scheduler.launchedTasks = [task1];
@@ -828,10 +1088,11 @@ describe("Update handlers tests", function () {
         scheduler.options.useZk = true;
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(scheduler.launchedTasks.length).to.equal(0);
+            expect(endedCalled).to.be.true;
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -858,14 +1119,15 @@ describe("Update handlers tests", function () {
         scheduler.options = {
             "frameworkName": "myfmw",
             "restartStates": ["TASK_FAILED", "TASK_KILLED", "TASK_LOST", "TASK_ERROR", "TASK_FINISHED"]
-        }
+        };
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(scheduler.pendingTasks.length).to.equal(1);
             expect(scheduler.pendingTasks[0].commandInfo.environment.variables).to.have.lengthOf(5);
+            expect(endedCalled).to.be.true;
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -897,6 +1159,7 @@ describe("Update handlers tests", function () {
             "restartStates": ["TASK_FAILED", "TASK_KILLED", "TASK_LOST", "TASK_ERROR", "TASK_FINISHED"]
         };
         scheduler.options.useZk = true;
+
         scheduler.taskHelper = {};
         scheduler.taskHelper.deleteTask = function (task) {
             expect(deleted).to.be.false;
@@ -904,12 +1167,13 @@ describe("Update handlers tests", function () {
         };
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(scheduler.pendingTasks.length).to.equal(1);
             expect(deleted).to.be.true;
             expect(scheduler.pendingTasks[0].commandInfo.environment.variables).to.have.lengthOf(0);
+            expect(endedCalled).to.be.true;
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -946,14 +1210,15 @@ describe("Update handlers tests", function () {
             deleted = true;
         };
 
-        task1.runtimeInfo.restarting = true;
+        task1.runtimeInfo.doNotRestart = true;
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(scheduler.pendingTasks.length).to.equal(0);
+            expect(endedCalled).to.be.true;
             expect(deleted).to.be.true;
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -985,14 +1250,15 @@ describe("Update handlers tests", function () {
         };
         scheduler.options.useZk = false;
 
-        task1.runtimeInfo.restarting = true;
+        task1.runtimeInfo.doNotRestart = true;
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(scheduler.pendingTasks.length).to.equal(0);
+            expect(endedCalled).to.be.true;
             expect(deleted).to.be.false;
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -1022,10 +1288,11 @@ describe("Update handlers tests", function () {
         };
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+
+        setImmediate(function () {
             expect(scheduler.launchedTasks[0].runtimeInfo.state).to.equal("TASK_FAILED");
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -1064,12 +1331,12 @@ describe("Update handlers tests", function () {
         };
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(saved).to.be.true;
             expect(scheduler.launchedTasks[0].runtimeInfo.state).to.equal("TASK_RUNNING");
             expect(scheduler.launchedTasks[0].runtimeInfo.startTime).to.be.above(1484200000000);
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -1110,12 +1377,12 @@ describe("Update handlers tests", function () {
         };
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(saved).to.be.true;
             expect(scheduler.launchedTasks[0].runtimeInfo.state).to.equal("TASK_RUNNING");
             expect(scheduler.launchedTasks[0].runtimeInfo.startTime).to.equal(originalStartTime);
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -1154,12 +1421,12 @@ describe("Update handlers tests", function () {
         };
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(saved).to.be.true;
             expect(scheduler.launchedTasks[0].runtimeInfo.state).to.equal("TASK_RUNNING");
             expect(scheduler.launchedTasks[0].runtimeInfo.startTime).to.be.above(1484200000000);
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -1192,10 +1459,10 @@ describe("Update handlers tests", function () {
         scheduler.options.killUnknownTasks = false;
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(killed).to.equal(false);
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -1236,11 +1503,12 @@ describe("Update handlers tests", function () {
         scheduler.options.killUnknownTasks = false;
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(killed).to.equal(false);
             expect(deleted).to.be.true;
+            expect(endedCalled).to.be.false;
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 
@@ -1273,11 +1541,11 @@ describe("Update handlers tests", function () {
         scheduler.options.killUnknownTasks = true;
 
         handlers["UPDATE"].call(scheduler, update);
-        setTimeout(function () {
+        setImmediate(function () {
             expect(killed).to.equal(true);
+            expect(endedCalled).to.be.true;
             done();
-        }, 100); //timeout with an error in one second
+        });
 
     });
 });
-

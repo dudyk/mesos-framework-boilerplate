@@ -34,7 +34,7 @@ describe("Vault Health Checker", function () {
         try {
             healthCheck = new TaskHealthHelper(scheduler, {});
         } catch (error) {
-            expect(error).to.be.an.error;
+            expect(error).to.be.an("error");
         }
         expect(healthCheck).to.be.undefined;
     });
@@ -147,8 +147,9 @@ describe("Vault Health Checker", function () {
         var task = {"name": "vault-35", "runtimeInfo": {"state": "TASK_RUNNING", "network": {"hostname": "task1", "ports": ["23142"]}}};
         self.httpRequest = sandbox.stub(http, "request");
         this.httpRequest.callsArgWith(1, res).returns(req);
+        healthCheck = new TaskHealthHelper(scheduler, {"additionalProperties": [{"name": "sealed", "inverse": false}], url: "/v1/sys/health?standbyok", "taskNameFilter": "^vault-[0-9]+$"});
+
         scheduler.on("ready", function() {
-            healthCheck = new TaskHealthHelper(scheduler, {"additionalProperties": [{"name": "sealed", "inverse": false}], url: "/v1/sys/health?standbyok", "taskNameFilter": "^vault-[0-9]+$"});
             self.healthRequestCreate = sandbox.stub(healthCheck, "healthRequestCreate");
             self.setCheckFailed = sandbox.stub(healthCheck, "setCheckFailed");
             healthCheck.checkInstance(task);
@@ -169,8 +170,9 @@ describe("Vault Health Checker", function () {
         var task = {"name": "vault-35", "runtimeInfo": {"state": "TASK_RUNNING", "network": {"hostname": "task1", "ports": ["23142"]}}};
         self.httpRequest = sandbox.stub(http, "request");
         this.httpRequest.callsArgWith(1, res).returns(req);
+        healthCheck = new TaskHealthHelper(scheduler, {"additionalProperties": [{"name": "sealed", "inverse": true}], url: "/v1/sys/health?standbyok", "taskNameFilter": "^vault-[0-9]+$"});
+        
         scheduler.on("ready", function() {
-            healthCheck = new TaskHealthHelper(scheduler, {"additionalProperties": [{"name": "sealed", "inverse": true}], url: "/v1/sys/health?standbyok", "taskNameFilter": "^vault-[0-9]+$"});
             self.healthRequestCreate = sandbox.stub(healthCheck, "healthRequestCreate");
             self.setCheckFailed = sandbox.stub(healthCheck, "setCheckFailed");
             healthCheck.checkInstance(task);
@@ -280,8 +282,8 @@ describe("Vault Health Checker", function () {
         var task = {"runtimeInfo":{"state": "TASK_RUNNING", "network":{"hostname": "task1","ports":["23142"]}}};
         self.httpRequest = sandbox.stub(http, "request");
         this.httpRequest.returns(req);
+        healthCheck = new TaskHealthHelper(scheduler, {url: "/v1/sys/health?standbyok"});
         scheduler.on("ready", function () {
-            healthCheck = new TaskHealthHelper(scheduler, {url: "/v1/sys/health?standbyok"});
             self.healthRequestCreate = sandbox.stub(healthCheck, "healthRequestCreate");
             self.setCheckFailed = sandbox.stub(healthCheck, "setCheckFailed");
             healthCheck.checkInstance(task);
@@ -333,7 +335,7 @@ describe("Vault Health Checker", function () {
         scheduler.on("ready", function () {
             healthCheck = new TaskHealthHelper(scheduler, {"propertyPrefix": "me", "checkBodyFunction": check, url: "/v1/sys/health?standbyok"});
             self.healthRequestCreate = sandbox.stub(healthCheck, "healthRequestCreate");
-            self.setCheckFailed = sandbox.stub(healthCheck, "setCheckFailed", function () {
+            self.setCheckFailed = sandbox.stub(healthCheck, "setCheckFailed").callsFake(function () {
                 expect(self.setCheckFailed.called).to.be.true;
                 expect(self.setCheckFailed.callCount).to.be.equal(1);
                 expect(self.healthRequestCreate.callCount).to.be.equal(1);
@@ -364,7 +366,7 @@ describe("Vault Health Checker", function () {
         scheduler.on("ready", function () {
             healthCheck = new TaskHealthHelper(scheduler, {"checkBodyFunction": check, url: "/v1/sys/health?standbyok"});
             self.healthRequestCreate = sandbox.stub(healthCheck, "healthRequestCreate");
-            self.setCheckFailed = sandbox.stub(healthCheck, "setCheckFailed", function () {
+            self.setCheckFailed = sandbox.stub(healthCheck, "setCheckFailed").callsFake(function () {
                 expect(self.setCheckFailed.called).to.be.true;
                 expect(self.setCheckFailed.callCount).to.be.equal(1);
                 expect(self.healthRequestCreate.callCount).to.be.equal(1);
@@ -394,7 +396,7 @@ describe("Vault Health Checker", function () {
         scheduler.on("ready", function () {
             healthCheck = new TaskHealthHelper(scheduler, {"propertyPrefix": "me", "checkBodyFunction": check, url: "/v1/sys/health?standbyok"});
             self.healthRequestCreate = sandbox.stub(healthCheck, "healthRequestCreate");
-            self.setProperties = sandbox.stub(healthCheck, "setProperties", function (taskToSet, value) {
+            self.setProperties = sandbox.stub(healthCheck, "setProperties").callsFake(function (taskToSet, value) {
                 expect(self.setProperties.called).to.be.true;
                 expect(self.setProperties.callCount).to.be.equal(1);
                 expect(value).to.be.true;
@@ -607,7 +609,7 @@ describe("Vault Health Checker", function () {
         var healthCheck;
         var task = {"runtimeInfo":{"state": "TASK_RUNNING", "network":{"hostname": "task1","ports":["23142"]}}};
 
-        healthCheck = new TaskHealthHelper(scheduler, {url: "/v1/sys/health?standbyok"});
+        healthCheck = new TaskHealthHelper(scheduler, {url: "/v1/sys/health?standbyok", checkOnSubscribe: false});
 
         var template = healthCheck.healthRequestCreate(task.runtimeInfo.network.hostname, task.runtimeInfo.network.ports[0]);
         expect(task.runtimeInfo.network.hostname).to.be.equal(template.host);

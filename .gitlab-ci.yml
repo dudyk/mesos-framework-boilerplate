@@ -1,0 +1,12 @@
+image: paymentsos/mesos-frameworks:build
+
+stages:
+  - dev
+
+Build and Unit test:
+  stage: dev
+  script:
+    - npm install --dev
+    - npm install
+    - npm install -g istanbul
+    - istanbul cover ./node_modules/mocha/bin/_mocha tests/*.test.js && ./node_modules/mocha/bin/_mocha tests/*.integration.js

@@ -12,7 +12,7 @@ var MockRes = require("mock-res");
 describe("helpers", function() {
     it("Test the CloneDeep helper", function () {
         var objects = [{ "a": 1 }, { "b": 2 }];
- 
+
         var deep = helpers.cloneDeep(objects);
         expect(deep[0] === objects[0]).to.be.false;
     });
@@ -67,7 +67,7 @@ describe("helpers", function() {
                     task1: {isSubmitted: true, priority: 1, resources: {staticPorts: [9001, 8000]}}
                 });
             } catch (error) {
-                expect(error).to.be.an.error;
+                expect(error).to.be.an("error");
                 errorSet = true;
             }
             expect(errorSet).to.be.true;
@@ -79,7 +79,7 @@ describe("helpers", function() {
                     task1: {isSubmitted: true, priority: 1, resources: {ports: 1, staticPorts: [9001, 8000]}}
                 });
             } catch (error) {
-                expect(error).to.be.an.error;
+                expect(error).to.be.an("error");
                 errorSet = true;
             }
             expect(errorSet).to.be.true;
@@ -314,5 +314,105 @@ describe("helpers", function() {
             });
             res.emit("error", data);
         });
+    });
+    describe("Task cleanup", function () {
+        it("Task with all fields set", function () {
+            var runtimeInfo = {agentId: "agentId-before-cleanup"};
+            var task = {
+                "name": "TASK-1",
+                "taskId": "12220-3440-12532-my-task",
+                "mesosName": "TASK",
+                "containerInfo": {},
+                "runtimeInfo": runtimeInfo,
+                "commandInfo": new mesos.CommandInfo(
+                    null, // URI
+                    new mesos.Environment([
+                        new mesos.Environment.Variable("FOO", "BAR1"),
+                        new mesos.Environment.Variable("HOST", "fsdfds.fdsds"),
+                        new mesos.Environment.Variable("HOST1", "fdsffd.dfsfds"),
+                        new mesos.Environment.Variable("1HOST", "dsgdsgs.dsfgs"),
+                        new mesos.Environment.Variable("PORT2", "32423"),
+                        new mesos.Environment.Variable("PORT", "32423"),
+                        new mesos.Environment.Variable("PORT342", "32423"),
+                        new mesos.Environment.Variable("1PORT2", "32423"),
+                        new mesos.Environment.Variable(" PORT2", "32423"),
+                        new mesos.Environment.Variable("PORT3a21", "342")
+                    ]), // Environment
+                    false, // Is shell?
+                    null, // Command
+                    null, // Arguments
+                    null // User
+                ),
+                "resources": {
+                    "cpus": 0.2,
+                    "mem": 128,
+                    "ports": 2,
+                    "disk": 10
+                }
+            };
+            helpers.taskCleanup(task);
+            expect(task.taskId).to.be.undefined;
+            expect(task.runtimeInfo).to.be.undefined;
+            expect(task.mesosName).to.be.undefined;
+            expect(task.commandInfo.environment.variables).lengthOf(7);
+            expect(task.isSubmitted).to.be.false;
+        });
+        it("Task with no environment", function () {
+            var runtimeInfo = {agentId: "agentId-before-cleanup"};
+            var task = {
+                "name": "TASK-1",
+                "taskId": "12220-3440-12532-my-task",
+                "mesosName": "TASK",
+                "containerInfo": {},
+                "runtimeInfo": runtimeInfo,
+                "commandInfo": new mesos.CommandInfo(
+                    null, // URI
+                    new mesos.Environment([]), // Environment
+                    false, // Is shell?
+                    null, // Command
+                    null, // Arguments
+                    null // User
+                ),
+                "resources": {
+                    "cpus": 0.2,
+                    "mem": 128,
+                    "ports": 2,
+                    "disk": 10
+                }
+            };
+            helpers.taskCleanup(task);
+            expect(task.taskId).to.be.undefined;
+            expect(task.runtimeInfo).to.be.undefined;
+            expect(task.mesosName).to.be.undefined;
+            expect(task.commandInfo.environment.variables).lengthOf(0);
+            expect(task.isSubmitted).to.be.false;
+        });
+    });
+    it("compare task ids", function () {
+        var ids = ["fw.task-1.32432-dsfds-342-fds",
+                "fw.task-11.32432-dsfds-342-fds",
+                "fw.task-9.32432-dsfds-342-fds",
+                "fw.task2-11.32432-dsfds-342-fds",
+                "fw.task-1.1.32432-dsfds-342-fds",
+                "fw.task-1132432-dsfds-342-fds",
+                "fw.task-381.32432-dsfds-342-fds",
+                "fw.task-131.32432-dsfds-342-fds",
+                "fw.task-381.32432-dsfds-342-fds",
+                "fw.task2-8.32432-dsfds-342-fds"];
+        var idsSorted = ["fw.task-1.1.32432-dsfds-342-fds",
+                "fw.task-1.32432-dsfds-342-fds",
+                "fw.task-9.32432-dsfds-342-fds",
+                "fw.task-11.32432-dsfds-342-fds",
+                "fw.task-1132432-dsfds-342-fds",
+                "fw.task-131.32432-dsfds-342-fds",
+                "fw.task-381.32432-dsfds-342-fds",
+                "fw.task-381.32432-dsfds-342-fds",
+                "fw.task2-8.32432-dsfds-342-fds",
+                "fw.task2-11.32432-dsfds-342-fds"];
+
+        var result = ids.sort(helpers.compareTaskIds);
+        expect(result).lengthOf(ids.length);
+        console.log(result);
+        expect(result).to.deep.equal(idsSorted);
     });
 });
