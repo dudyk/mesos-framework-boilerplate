@@ -1,7 +1,7 @@
 {
-  "name": "mesos-framework",
-  "version": "0.4.0",
-  "description": "A wrapper around the Mesos HTTP APIs for Schedulers and Executors. Write your Mesos framework in pure JavaScript!",
+  "name": "mesos-framework-zooz",
+  "version": "1.0.0",
+  "description": "A wrapper around the Mesos HTTP APIs for Schedulers and Executors.",
   "keywords": [
     "mesos",
     "framework",
@@ -14,14 +14,13 @@
   ],
   "main": "index.js",
   "scripts": {
-    "test": "./node_modules/.bin/gulp test",
-    "test-ci": "./node_modules/.bin/gulp ci",
     "generate-docs": "node_modules/.bin/jsdoc --configure .jsdoc.json --verbose",
     "publish-please": "publish-please",
     "prepublish": "publish-please guard"
   },
   "author": "TobiLG",
-  "license": "MIT",
+  "contributors": "Jacob Koren, Didi Kohen, hanymahajna",
+  "license": "Apache 2.0",
   "dependencies": {
     "lodash": "^4.17.4",
     "nock": "^9.0.10",
@@ -51,6 +50,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Zooz/mesos-framework.git"
+    "url": "https://github.com/Zooz/mesos-framework-zooz.git"
   }
 }
