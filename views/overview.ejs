@@ -1,0 +1,124 @@
+<div class="row" id="overview">
+    <div class="col-md-3" id="numoftask">
+        <div class="cell dashboard-stat">
+            <div class="display">
+                <div class="number">
+                    <h3 class="font-red-haze">{{stats.overall.instances}}</h3>
+                    <small>TASKS</small>
+                </div>
+                <div class="icon">
+                    <i class="fa fa-tasks"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3" id="numofcpu">
+        <div class="cell dashboard-stat">
+            <div class="display">
+                <div class="number">
+                    <h3 class="font-red-haze">{{stats.overall.cpus}}</h3>
+                    <small>CPUS</small>
+                </div>
+                <div class="icon">
+                    <i class="fa fa-file-text-o"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3" id="numofmem">
+        <div class="cell dashboard-stat">
+            <div class="display">
+                <div class="number">
+                    <h3 class="font-red-haze">{{stats.overall.mem}}MB</h3>
+                    <small>MEMORY</small>
+                </div>
+                <div class="icon">
+                    <i class="fa fa-file-text-o"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3" id="numofdisk">
+        <div class="cell dashboard-stat">
+            <div class="display">
+                <div class="number">
+                    <h3 class="font-red-haze" ng-show="stats.overall.disk >= 1024">{{(stats.overall.disk/1024) | number:2}}GB</h3>
+                    <h3 class="font-red-haze" ng-show="1024 > stats.overall.disk">{{stats.overall.disk}}MB</h3>
+                    <small>DISK</small>
+                </div>
+                <div class="icon">
+                    <i class="fa fa-database"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+        <div class="cell">
+            <h3>Tasks State</h3>
+
+            <div class="progress">
+                <div ng-repeat="state in statesPercentage track by $index">
+                    <div class="progress-bar progress-bar-striped active"
+                    ng-class="state.type && 'progress-bar-' + state.type" style="width: {{state.percentage}}%; {{state.style}}"
+                    aria-valuenow="{{state.percentage}}" aria-valuemin="0" aria-valuemax="100">
+                    {{state.percentage}}% {{state.state}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<% if (staticOverviewCells) { -%>
+    <div class="row">
+        <% for (var infocell in staticOverviewCells) { -%>
+            <div class="col-md-3" id="<%= staticOverviewCells[infocell].name %>">
+                <div class="cell dashboard-stat">
+                    <div class="display">
+                        <div class="number">
+                            <% if (staticOverviewCells[infocell].value.indexOf("http") > -1) { -%>
+                                <a href="<%= staticOverviewCells[infocell].value %>"><h5 class="font-red-haze"><%= staticOverviewCells[infocell].name %><h5></a>
+                                    <% } else { -%>
+                                        <h3 class="font-red-haze"><%= staticOverviewCells[infocell].value %></h3>
+                                        <% }; -%>
+                                        <small><%= staticOverviewCells[infocell].name %></small>
+                        </div>
+                        <div class="icon">
+                            <i class="fa fa-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+<% }; -%>
+    </div>
+<% }; %>
+
+<div class="row">
+    <div class="col-md-12" ng-show="configuration.frameworkLinks.length">
+        <div class="cell">
+            <h3>Linked Frameworks</h3>
+
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>Hostname</th>
+                            <th>Health</th>
+                            <th>Fail Time (minutes)</th>
+                            <th>Fail Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="link in configuration.frameworkLinks" ng-class="link.healthy ? 'success' : 'danger'">
+                            <td><a ng-href="{{link.href}}" target="_blank">{{link.linkHostname}}</a></td>
+                            <td>{{link.healthy ? "true" : "false"}}</td>
+                            <td>{{!link.healthy ? (link.failTries * 30)/60 : "0"}}</td>
+                            <td>{{!link.healthy ? link.failTries : "N/A"}}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

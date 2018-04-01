@@ -1,0 +1,100 @@
+<div ng-controller="UpgradeController">
+    <div class="panel-group">
+        <div class="panel panel-primary">
+            <div class="panel-heading"><h5>About</h5></div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-3">Framework name: {{$parent.configuration.frameworkName}}</div>
+                    <div class="col-md-3">Framework version: {{$parent.configuration.configVersion}}</div>
+                    <div class="col-md-3">cpu: {{$parent.configuration.marathonResources.cpu}}</div>
+                    <div class="col-md-3">memory: {{$parent.configuration.marathonResources.mem}}</div>
+                </div>
+                <br>
+                <div class="row">
+                    <div class="col-md-8">Gitlab base project: <a
+                            href="https://github.com/tobilg/mesos-framework-boilerplate/blob/master/README.md">https://github.com/tobilg/mesos-framework-boilerplate/blob/master/README.md</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--<div tooltip id="demoContainer">-->
+        <!--<span>Press Me </span>-->
+    <!--</div>-->
+
+
+    <div class="panel-group">
+        <div class="panel panel-primary">
+            <div class="panel-heading"><h5>Upgrade</h5></div>
+            <div class="panel-body">
+                <div ng-hide="versions.length">
+                    <p>No upgradable versions found</p>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group" ng-show="versions.length">
+                        <label for="exampleSelect2">Available versions:</label>
+                        <select size="10" class="form-control" id="exampleSelect2">
+                            <option ng-repeat="version in versions | orderBy:'version'" ng-click="loadVariables(version.version)">
+                                {{version.version}}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                    <div class="col-md-10">
+                        <div class="row">
+                          <div class="col-md-5" ng-show="enableSummaryAction">
+                              <div class="row panel panel-primary">
+                                  <div class="panel-heading">Summary</div>
+                                  <div class="panel-body">
+                                      <div>{{versionSummary}}</div>
+
+                                  </div>
+                              </div>
+                          </div>
+                            <div class="col-md-5" style="margin-left: 50pt" ng-show="enableRequiredActionSection">
+                                <div class="row panel panel-danger">
+                                    <div class="panel-heading">Required Actions</div>
+                                    <div class="panel-body">
+                                        <div>{{versionActions}}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <br>
+                        <div class="row">
+                            <div class="col-md-4" ng-repeat="param in versionParams" id="versionVariableForum">
+                                <div>{{param.name}} :</div>
+                                <input type="text" class="form-control" value="{{param.value}}" ng-model="param.value" tooltip-placement="top" uib-tooltip="{{param.description}}" ng-disabled="param.isDisabled">
+                            </div>
+                        </div>
+                        <br>
+                        <div class="row">
+                            <div style="display:flex; justify-content:flex-end;  align-items:center;">
+                                <button type="button" class="btn btn-primary" ng-click="submitViewUpgradeRequest()" ng-show="enableSubmitButton">Submit for review</button>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+    <div class="panel-group" ng-show="enableUpgradeView">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel panel-danger">
+                    <div class="panel-heading"><h5>Upgrade review</h5></div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label for="comment">Review:</label>
+                            <textarea class="form-control" rows="15" id="comment" disabled>{{upgradeJsonObject}}</textarea>
+                            <br>
+                            <div style="display:flex; justify-content:flex-end;  align-items:center;">
+                                <button type="button" id="upgradeButton" class="btn btn-danger" ng-click="submitUpgradeRequest()">Upgrade</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
