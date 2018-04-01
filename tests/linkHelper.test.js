@@ -9,14 +9,7 @@ var fs = require("fs");
 var linkHelper = rewire("../lib/linkHelper");
 var mesosDNS = require("mesos-dns-node-resolver");
 
-var helpers;
-
-// Instantiate the mesos-framework module related objects
-if (fs.existsSync("../mesos-framework")) {
-    helpers = require("../mesos-framework").helpers;
-} else {
-    helpers = require("mesos-framework").helpers;
-}
+var helpers = require("../lib/helpers");
 
 // Testing require
 var expect = require("chai").expect;

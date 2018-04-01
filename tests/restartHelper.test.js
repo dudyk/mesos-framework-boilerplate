@@ -7,11 +7,9 @@ var util = require("util");
 
 var should = require('should');
 
-var mesosModule = require("../lib/helpers").getMesosModule();
-// Instantiate the mesos-framework module related objects
-var helpers = mesosModule.helpers;
-var Scheduler = mesosModule.Scheduler;
-var Mesos = mesosModule.Mesos.getMesos();
+var helpers = require("../lib/helpers");
+var Scheduler = require("../lib/scheduler");
+var Mesos = require("../lib/mesos")().getMesos();
 
 var RestartHelper = require("../lib/restartHelper");
 

@@ -7,8 +7,7 @@ var fs = require("fs");
 var sinon = require("sinon");
 var clock = sinon.useFakeTimers();
 var helpers = require("../lib/helpers");
-var TaskHealthHelper = helpers.getMesosModule().TaskHealthHelper;
-var mesosHelpers = helpers.getMesosModule().helpers;
+var TaskHealthHelper = require("../lib/taskHealthHelper");
 var RestartHelper = require("../lib/restartHelper");
 
 

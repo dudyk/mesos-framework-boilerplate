@@ -6,7 +6,6 @@ var rewire = require("rewire");
 var configHelperModule = rewire("../lib/configHelper");
 var ConfigHelper = configHelperModule.ConfigHelper;
 var helpers = require("../lib/helpers");
-var mesosHelpers = helpers.getMesosModule().helpers;
 
 // Testing require
 var expect = require("chai").expect;
@@ -67,7 +66,7 @@ describe("ConfigHelper tests", function () {
                 resolve([{"host": "test.host", "ports": [432432,32423]}]);
             });
         }});
-        mesosHelpers.doHealthRequest = sandbox.stub(mesosHelpers, "doHealthRequest").callsFake(function (request, okCallbak, errorCallback, codes, bodyFunction, errorSuffix, scheduler) {
+        helpers.doHealthRequest = sandbox.stub(helpers, "doHealthRequest").callsFake(function (request, okCallbak, errorCallback, codes, bodyFunction, errorSuffix, scheduler) {
             errorCallback();
         });
         var params = {"loglevel": "debug"};
@@ -89,7 +88,7 @@ describe("ConfigHelper tests", function () {
                 resolve([{"host": "test.host", "ports": [432432,32423]}]);
             });
         }});
-        mesosHelpers.doHealthRequest = sandbox.stub(mesosHelpers, "doHealthRequest").callsFake(function (request, okCallbak, errorCallback, codes, bodyFunction, errorSuffix, scheduler) {
+        helpers.doHealthRequest = sandbox.stub(helpers, "doHealthRequest").callsFake(function (request, okCallbak, errorCallback, codes, bodyFunction, errorSuffix, scheduler) {
             bodyFunction("{");
             errorCallback();
         });
@@ -111,7 +110,7 @@ describe("ConfigHelper tests", function () {
                 resolve([{"host": "test.host", "ports": [432432,32423]}]);
             });
         }});
-        mesosHelpers.doHealthRequest = sandbox.stub(mesosHelpers, "doHealthRequest").callsFake(function (request, okCallbak, errorCallback, codes, bodyFunction, errorSuffix, scheduler) {
+        helpers.doHealthRequest = sandbox.stub(helpers, "doHealthRequest").callsFake(function (request, okCallbak, errorCallback, codes, bodyFunction, errorSuffix, scheduler) {
             bodyFunction("{}");
             okCallbak();
         });

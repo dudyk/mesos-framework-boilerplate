@@ -7,6 +7,7 @@ for
 "use strict";
 // Internal modules
 const fs = require("fs");
+const path = require('path');
 
 // NPM modules
 var express = require("express");
@@ -52,7 +53,7 @@ app.use("/bower_components", express.static("bower_components"));
 
 var helpers = require("./lib/helpers");
 
-var Scheduler = helpers.getMesosModule().Scheduler;
+var Scheduler = require("./lib/scheduler");
 
 // The framework's overall configuration
 var frameworkConfiguration = {
@@ -79,19 +80,19 @@ var frameworkConfiguration = {
     "moduleList": []
 };
 
-fs.mkdirSync(process.env.MESOS_SANDBOX + "/logs");
+fs.mkdirSync(path.join(process.env.MESOS_SANDBOX, "logs"));
 
 function requireModules(scheduler) {
     // Importing pluggable modules
-    var moduleFiles = fs.readdirSync("./");
+    var moduleFiles = fs.readdirSync(process.env.MESOS_SANDBOX);
     if (moduleFiles) {
         var index;
         var currentModule;
         for (index = 0; index < moduleFiles.length; index += 1) {
             currentModule = moduleFiles[index];
-            if (currentModule.match(/-module$/) && fs.existsSync("./" + currentModule + "/index.js")) {
+            if (currentModule.match(/-module$/) && fs.existsSync(path.join(process.env.MESOS_SANDBOX, currentModule, "index.js"))) {
                 scheduler.logger.info("Loading module " + currentModule);
-                moduleSetups.push(require("./" + currentModule));
+                moduleSetups.push(require(process.env.MESOS_SANDBOX + currentModule));
             }
         }
     }
