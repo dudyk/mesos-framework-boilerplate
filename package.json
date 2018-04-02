@@ -16,6 +16,7 @@
   "scripts": {
     "generate-docs": "node_modules/.bin/jsdoc --configure .jsdoc.json --verbose",
     "publish-please": "node ./node_modules/publish-please/bin/publish-please.js",
+    "start": "node init.js",
     "prepublish": "node ./node_modules/publish-please/bin/publish-please.js guard"
   },
   "author": "TobiLG",

@@ -86,13 +86,17 @@ function requireModules(scheduler) {
     // Importing pluggable modules
     var moduleFiles = fs.readdirSync(process.env.MESOS_SANDBOX);
     if (moduleFiles) {
+        // Adding link to the project
+        fs.symlinkSync(__dirname, path.join(process.env.MESOS_SANDBOX, "framework-core"));
         var index;
         var currentModule;
         for (index = 0; index < moduleFiles.length; index += 1) {
             currentModule = moduleFiles[index];
             if (currentModule.match(/-module$/) && fs.existsSync(path.join(process.env.MESOS_SANDBOX, currentModule, "index.js"))) {
                 scheduler.logger.info("Loading module " + currentModule);
-                moduleSetups.push(require(process.env.MESOS_SANDBOX + currentModule));
+                // Adding node_modules link
+                fs.symlinkSync(path.join(__dirname, "node_modules"), path.join(process.env.MESOS_SANDBOX, currentModule, "node_modules"));
+                moduleSetups.push(require(path.join(process.env.MESOS_SANDBOX, currentModule)));
             }
         }
     }
