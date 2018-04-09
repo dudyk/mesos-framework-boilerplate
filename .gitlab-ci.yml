@@ -2,6 +2,7 @@ image: paymentsos/mesos-frameworks:build
 
 stages:
   - test
+  - build
 
 variables:
   IMAGE: $CI_REGISTRY_IMAGE
