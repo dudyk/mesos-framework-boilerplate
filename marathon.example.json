@@ -1,0 +1,89 @@
+{
+  "id": "/druid-framework",
+  "connected": true,
+  "recovered": false,
+  "TASK_UNREACHABLE": 0,
+  "instances": 1,
+  "cpus": 1,
+  "mem": 1024,
+  "disk": 0,
+  "gpus": 0,
+  "constraints": [],
+  "fetch": [
+    {
+      "uri": "<REGISTRY_AUTH_URL>/docker.tar.gz",
+      "extract": true,
+      "executable": false,
+      "cache": false
+    },
+    {
+      "uri": "<DRUID_MODULE_URL>/druid.tar.gz",
+      "extract": true,
+      "executable": false,
+      "cache": false
+    }
+  ],
+  "storeUrls": [],
+  "backoffSeconds": 1,
+  "backoffFactor": 1.15,
+  "maxLaunchDelaySeconds": 3600,
+  "container": {
+    "type": "DOCKER",
+    "volumes": [],
+    "docker": {
+      "image": "<framework-core-image>:0.1",
+      "network": "HOST",
+      "portMappings": [],
+      "privileged": false,
+      "parameters": [],
+      "forcePullImage": true
+    }
+  },
+  "healthChecks": [
+    {
+      "gracePeriodSeconds": 30,
+      "intervalSeconds": 10,
+      "timeoutSeconds": 20,
+      "maxConsecutiveFailures": 3,
+      "portIndex": 0,
+      "path": "/health",
+      "protocol": "HTTP",
+      "ignoreHttp1xx": false
+    }
+  ],
+  "readinessChecks": [],
+  "dependencies": [],
+  "upgradeStrategy": {
+    "minimumHealthCapacity": 0,
+    "maximumOverCapacity": 0
+  },
+  "unreachableStrategy": {
+    "inactiveAfterSeconds": 300,
+    "expungeAfterSeconds": 600
+  },
+  "killSelection": "YOUNGEST_FIRST",
+  "acceptedResourceRoles": [
+    "*"
+  ],
+  "portDefinitions": [
+    {
+      "port": 10087,
+      "protocol": "tcp"
+    }
+  ],
+  "requirePorts": true,
+  "labels": {
+    "DCOS_SERVICE_SCHEME": "http",
+    "DCOS_SERVICE_NAME": "druid-framework",
+    "DCOS_PACKAGE_FRAMEWORK_NAME": "druid-framework",
+    "DCOS_SERVICE_PORT_INDEX": "0"
+  },
+  "env": {
+    "UPGRADE_CONFIG_SERVICE": "fw-upgrade-service.delivery",
+    "PREVIOUS_CONFIG_VERSION": "1.00",
+    "CONFIG_VERSION": "1.01",
+    "FRAMEWORK_TYPE": "druid-framework",
+    "FRAMEWORK_NAME": "druid-framework",
+    "CREDENTIALS_URL": "<CREDENTIALS_URL>/credentials.sh"
+  }
+}
