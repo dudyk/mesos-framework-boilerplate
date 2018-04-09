@@ -1,27 +1,31 @@
 {
-  "name": "mesos-framework-zooz",
-  "version": "1.0.0",
-  "description": "A wrapper around the Mesos HTTP APIs for Schedulers and Executors.",
+  "name": "mesos-framework-boilerplate-zooz",
+  "version": "0.1.1",
+  "description": "A boilerplate for developing Mesos frameworks with JavaScript",
+  "main": "index.js",
+  "scripts": {
+    "test": "istanbul cover ./node_modules/.bin/_mocha ./tests/*.test* --  -- --recursive --reporter mochawesome",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zooz/mesos-framework-boilerplate-zooz.git"
+  },
   "keywords": [
     "mesos",
     "framework",
-    "http",
-    "api",
-    "wrapper",
-    "base",
     "scheduler",
-    "executor"
+    "executor",
+    "boilerplate",
+    "mesosphere",
+    "dc/os",
+    "dcos",
+    "dashboard"
   ],
-  "main": "index.js",
-  "scripts": {
-    "generate-docs": "node_modules/.bin/jsdoc --configure .jsdoc.json --verbose",
-    "publish-please": "node ./node_modules/publish-please/bin/publish-please.js",
-    "start": "node init.js",
-    "prepublish": "node ./node_modules/publish-please/bin/publish-please.js guard"
-  },
   "author": "TobiLG",
   "contributors": "Jacob Koren, Didi Kohen, hanymahajna",
-  "license": "Apache-2.0",
+  "license": "Apache 2.0",
+  "homepage": "https://github.com/Zooz/mesos-framework-boilerplate-zooz",
   "dependencies": {
     "async": "^2.5.0",
     "aws-sdk": "^2.133.0",
@@ -56,12 +60,9 @@
     "mocha": "^3.2.0",
     "mock-req": "^0.2.0",
     "mock-res": "^0.3.3",
-    "nock": "^9.2.3",
-    "publish-please": "^2.3.1",
     "rewire": "^2.5.2",
     "should": "^11.2.0",
     "sinon": "2.2.0",
     "supertest": "^3.0.0"
-  },
-  "repository": "https://github.com/Zooz/mesos-framework-core"
+  }
 }
