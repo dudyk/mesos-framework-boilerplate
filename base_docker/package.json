@@ -1,5 +1,5 @@
 {
-  "name": "mesos-framework-core",
+  "name": "mesos-framework-zooz",
   "version": "1.0.0",
   "description": "A wrapper around the Mesos HTTP APIs for Schedulers and Executors.",
   "keywords": [
