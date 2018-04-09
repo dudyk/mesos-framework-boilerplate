@@ -1,0 +1,9 @@
+node_modules
+Dockerfile
+coverage/
+README.md
+.git
+.gitignore
+base_docker
+deps
+build_base.sh
