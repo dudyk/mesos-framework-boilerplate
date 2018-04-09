@@ -1,0 +1,15 @@
+  "body-parser": "^1.18.2"
+  "bunyan": "^1.8.12"
+  "express": "^4.16.1"
+  "express-http-proxy": "^0.11.0"
+  "lodash": "^4.17.4"
+  "md5": "^2.2.1"
+  "mesos-dns-node-resolver": "^1.0.0"
+  "request": "^2.83.0"
+  "request-promise": "^4.2.2"
+  "require-environment-variables": "^1.1.2"
+  "uuid": "^2.0.3"
+  "winston": "^2.4.0"
+  "winston-daily-rotate-file": "^1.7.2"
+{
+}

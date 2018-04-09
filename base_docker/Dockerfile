@@ -1,5 +1,4 @@
-ARG SRC_IMAGE
-FROM $SRC_IMAGE
+FROM node:alpine
 
 MAINTAINER didi@zooz.com
 
@@ -18,5 +17,8 @@ WORKDIR ${APP_DIR}
 # Add application
 ADD . ${APP_DIR}
 
-CMD ["sh", "./get_creds.sh"]
+ARG NPM_SET
+RUN $NPM_SET || true;npm install
+
+CMD ["node", "index.js"]
 
