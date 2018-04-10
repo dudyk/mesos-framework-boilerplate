@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>taskHealthHelper.js - Documentation</title>
+
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Classes</li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Executor.html">Executor</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Executor.html#message">message</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Executor.html#subscribe">subscribe</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Executor.html#update">update</a></span></li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Mesos.html">Mesos</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Mesos.html#getBuilder">getBuilder</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Mesos.html#getMesos">getMesos</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Mesos.html#getProtoBuf">getProtoBuf</a></span></li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="Scheduler.html">Scheduler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#accept">accept</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#acknowledge">acknowledge</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#addAzMap">addAzMap</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#addLocationsMap">addLocationsMap</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#cleanAzMap">cleanAzMap</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#cleanLocationsMap">cleanLocationsMap</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#decline">decline</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#getRunningTasks">getRunningTasks</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#handleEvent">handleEvent</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#kill">kill</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#message">message</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#reconcile">reconcile</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#request">request</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#revive">revive</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#shutdown">shutdown</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#subscribe">subscribe</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#sync">sync</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="Scheduler.html#teardown">teardown</a></span></li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="TaskHealthHelper.html">TaskHealthHelper</a></span></li><li class="nav-heading"><span class="nav-item-type type-class">C</span><span class="nav-item-name"><a href="TaskHelper.html">TaskHelper</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="TaskHelper.html#deleteTask">deleteTask</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="TaskHelper.html#loadTasks">loadTasks</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="TaskHelper.html#saveTask">saveTask</a></span></li>
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">taskHealthHelper.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use strict";
+
+var http = require("http");
+var helpers = require("../lib/helpers");
+
+/**
+ * Represents a TaskHealthHelper object
+ * @constructor
+ * @param {object} scheduler - The scheduler object.
+ * @param {object} options - The option map object.
+ */
+function TaskHealthHelper(scheduler, options) {
+    if (!(this instanceof TaskHealthHelper)) {
+        return new TaskHealthHelper(scheduler, options);
+    }
+
+    var self = this;
+
+    self.scheduler = scheduler;
+
+    self.options = {};
+    self.options.interval = options.interval || 30;
+    self.options.graceCount = options.graceCount || 4;
+    self.options.portIndex = options.portIndex || 0;
+    self.options.propertyPrefix = options.propertyPrefix || "";
+    self.options.errorEvent = options.errorEvent || self.options.propertyPrefix + "task_unhealthy";
+    self.options.additionalProperties = options.additionalProperties || [];
+    self.options.taskNameFilter = options.taskNameFilter || null;
+    self.options.statusCodes = options.statusCodes || [200];
+    self.options.checkBodyFunction = options.checkBodyFunction || null;
+    self.options.logFirstFail = options.logFirstFail || false;
+    self.options.checkOnSubscribe = options.hasOwnProperty("checkOnSubscribe")
+        ? options.checkOnSubscribe
+        : true;
+
+    if (self.options.checkOnSubscribe) {
+        scheduler.on("subscribe", function () {
+            if (self.interval) {
+                self.checkRunningInstances();
+            }
+        });
+    }
+    self.logger = options.logger || helpers.getLogger((options.logging &amp;&amp; options.logging.path ? options.logging.path : null), (options.logging &amp;&amp; options.logging.fileName ? options.logging.fileName : null), (options.logging &amp;&amp; options.logging.level ? options.logging.level : null), self);
+    if (options.url) {
+        self.options.url = options.url;
+    } else {
+        throw new Error("Must set URL");
+    }
+
+    self.healthRequestCreate = function (host, port) {
+        return {
+            "host": host,
+            "port": port,
+            "path": options.url,
+            "method": "GET",
+            headers: {}
+        };
+    };
+
+    self.checkRunningInstances = function () {
+
+        self.logger.debug("Running periodic healthcheck" + (self.options.propertyPrefix.length ? ", prefix: " + self.options.propertyPrefix : ""));
+
+        self.scheduler.launchedTasks.forEach(function (task) {
+            self.checkInstance.call(self, task);
+        });
+    };
+}
+
+TaskHealthHelper.prototype.toString = function () {
+    var name = "HealthHelper";
+    if (this.options.propertyPrefix) {
+        name += " prefix: " + this.options.propertyPrefix;
+    }
+    if (this.options.taskNameFilter) {
+        name += " filter: " + this.options.taskNameFilter.replace(/-\[0-9\]\+?\$/g, "").replace(/\^/g, "");
+    }
+    return name;
+};
+
+TaskHealthHelper.prototype.taskFilter = function (name) {
+    var self = this;
+    if (self.options.taskNameFilter) {
+        return name.match(self.options.taskNameFilter) !== null;
+    }
+    return true;
+};
+
+TaskHealthHelper.prototype.setCheckFailed = function (task) {
+
+    var self = this;
+
+    if (task.runtimeInfo[self.options.propertyPrefix + "checkFailCount"] === undefined) {
+        task.runtimeInfo[self.options.propertyPrefix + "checkFailCount"] = 0;
+    }
+    task.runtimeInfo[self.options.propertyPrefix + "checkFailCount"] += 1;
+    if (task.runtimeInfo[self.options.propertyPrefix + "checkFailCount"] === self.options.graceCount) {
+        self.logger.debug("Task marked unhealthy" + (self.options.propertyPrefix.length
+            ? ", prefix: " + self.options.propertyPrefix
+            : ""));
+        if (self.options.logFirstFail &amp;&amp; task.runtimeInfo[self.options.propertyPrefix + "healthy"] === true) {
+            self.logger.info("Healthy task became unhealthy" + (self.options.propertyPrefix.length
+                ? ", prefix: " + self.options.propertyPrefix
+                : "") + "id: " + task.taskId);
+        }
+        task.runtimeInfo[self.options.propertyPrefix + "healthy"] = false;
+        self.setProperties(task, false);
+        self.scheduler.emit(self.options.errorEvent, task);
+    } else if (task.runtimeInfo[self.options.propertyPrefix + "healthy"] === false) {
+        self.scheduler.emit(self.options.errorEvent, task);
+    }
+};
+
+
+TaskHealthHelper.prototype.checkInstance = function (task) {
+
+    var self = this;
+
+    function bodyFunctionCall (body) {
+        var value = false;
+        value = self.options.checkBodyFunction.call(self, task, body);
+        self.logger.debug("Checking the response body: " + value);
+        return value;
+    }
+
+    if (task.runtimeInfo &amp;&amp; task.runtimeInfo.state === "TASK_RUNNING" &amp;&amp; self.taskFilter(task.name)) {
+        if (task.runtimeInfo.network &amp;&amp; task.runtimeInfo.network.hostname &amp;&amp; task.runtimeInfo.network.ports &amp;&amp; task.runtimeInfo.network.ports[self.options.portIndex]) {
+            self.logger.debug("Checking health of: " + task.name);
+            helpers.doHealthRequest(self.healthRequestCreate(task.runtimeInfo.network.hostname, task.runtimeInfo.network.ports[self.options.portIndex]), function () {
+                task.runtimeInfo[self.options.propertyPrefix + "checkFailCount"] = 0;
+                task.runtimeInfo[self.options.propertyPrefix + "healthy"] = true;
+                self.setProperties(task, true);
+            }, function () {
+                self.setCheckFailed.call(self, task);
+            }, self.options.statusCodes, self.options.checkBodyFunction
+                ? bodyFunctionCall
+                : null, (self.options.propertyPrefix.length
+                ? ", prefix: " + self.options.propertyPrefix
+                : ""), self);
+        }
+    }
+};
+
+TaskHealthHelper.prototype.setProperties = function (task, value) {
+    var self = this;
+    self.options.additionalProperties.forEach(function (property) {
+        //self.logger.debug("Setting " + property.name + " to " + value);
+
+        // If healthy or setting unhealthy
+        if (value || property.setUnhealthy) {
+            var propertyValue = value;
+            if (property.inverse) {
+                propertyValue = !value;
+            }
+            task.runtimeInfo[property.name] = propertyValue;
+        }
+    });
+};
+
+TaskHealthHelper.prototype.stopHealthCheck = function () {
+    var self = this;
+
+    if (self.interval) {
+        clearInterval(self.interval);
+        self.interval = null;
+    }
+}
+
+TaskHealthHelper.prototype.setupHealthCheck = function () {
+    var self = this;
+
+    self.stopHealthCheck();
+    self.interval = setInterval(self.checkRunningInstances, self.options.interval * 1000);
+};
+
+module.exports = TaskHealthHelper;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<br class="clear">
+
+<footer>
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Thu Mar 29 2018 14:32:53 GMT+0300 (IDT) using the Minami theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+</body>
+</html>

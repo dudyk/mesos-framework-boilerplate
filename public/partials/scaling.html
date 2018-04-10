@@ -1,4 +1,4 @@
-<div class="row">
+<div class="row" id="scaling">
     <div class="col-md-12" ng-controller="ScalingController">
         <div class="cell">
             <h3>Horizontal Scaling</h3>
@@ -7,11 +7,11 @@
                     <div class="col-md-12">
                         <div class="input-group">
                             <span class="input-group-addon" id="basic-addon3">{{taskType.type}}</span>
-                            <input type="text" class="form-control" aria-describedby="basic-addon3" ng-model="taskType.runningInstances" onFocus="this.blur()">
+                            <input type="text" class="form-control" aria-describedby="basic-addon3" ng-model="taskType.allInstances" onFocus="this.blur()">
                             <span class="input-group-btn">
-                                <button class="btn btn-success" type="button" ng-click="taskType.runningInstances = taskType.runningInstances+1">+</button>
-                                <button class="btn btn-danger" type="button" ng-click="taskType.runningInstances = (taskType.runningInstances !== 0 ? taskType.runningInstances-1 : 0)">-</button>
-                                <button class="btn btn-default" type="button" ng-click="scale(taskType.type, taskType.runningInstances)">Scale</button>
+                                <button class="btn btn-success" type="button" ng-click="taskType.allInstances = taskType.allInstances+1">+</button>
+                                <button class="btn btn-danger" type="button" ng-click="taskType.allInstances = (taskType.allInstances > taskType.instancesMinimum ? taskType.allInstances - 1 : taskType.instancesMinimum)">-</button>
+                                <button class="btn btn-default" type="button" ng-click="scale(taskType.type, taskType.allInstances)">Scale</button>
                             </span>
                         </div>
                     </div>

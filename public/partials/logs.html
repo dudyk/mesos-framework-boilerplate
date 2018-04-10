@@ -1,10 +1,52 @@
-<div class="row" ng-controller="LogsController">
+<div class="row" id="logs">
     <div class="col-md-12">
         <div class="cell">
+            <h3>Log level</h3>
+            <div class="table-responsive">
+                <div class="col-sm-8">
+                    <table class="table table-hover table-condensed table-striped" table-layout="inherit">
+                        <thead>
+                            <tr>
+                                <th align="left"><b>Component</b></th>
+                                <th align="left"><b>Level</b></th>
+                                <th align="left"><b>Action</b></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="module in logModules track by $index">
+                                <td><b>{{module.name}}</b></td>
+                                <td align="left">
+                                    <select ng-model="module.value">
+                                        <option value="info">info</option>
+                                        <option value="debug">debug</option>
+                                    </select>
+                                </td>
+                                <td align="left">
+                                    <input type="submit" value="Submit" ng-click="setLogs(module.value, module.name)" class="btn btn-sm">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div><b>Set all: </b><select ng-model="allValue">
+                                    <option value="info">info</option>
+                                    <option value="debug">debug</option>
+                                </select> <input type="submit" value="Submit" ng-click="setAllLogs(allValue)" ng-disabled="allValue == 'mixed'" class="btn btn-sm">
+            </div>
+                </div>
+            </div>
+
+            <br/>
+            <br/>
+            <br/>
+
             <h3>Logs</h3>
+            <div class="btn-toolbar">
+                <input type="submit" value="Fetch logs" ng-click="fetchLogs()" class="btn btn-sm btn-primary">
+            </div>
+            <br/>
             <div class="logs">
                 <pre>
-{{logs}}
+                    {{logs}}
                 </pre>
             </div>
         </div>
